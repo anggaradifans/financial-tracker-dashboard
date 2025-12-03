@@ -1,6 +1,8 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import Dashboard from './components/Dashboard'
+import DemoDashboard from './components/DemoDashboard'
 import AuthFlow from './components/AuthFlow'
 import './App.css'
 
@@ -21,16 +23,38 @@ const AppContent = () => {
     )
   }
 
-  return user ? <Dashboard /> : <AuthFlow />
+  return (
+    <Routes>
+      {/* Demo route - accessible without authentication */}
+      <Route path="/demo" element={<DemoDashboard />} />
+      
+      {/* Protected routes */}
+      <Route
+        path="/dashboard"
+        element={user ? <Dashboard /> : <Navigate to="/" replace />}
+      />
+      
+      {/* Auth routes */}
+      <Route
+        path="/"
+        element={user ? <Navigate to="/dashboard" replace /> : <AuthFlow />}
+      />
+      
+      {/* Catch all - redirect to home */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
 }
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </ThemeProvider>
+    <BrowserRouter>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   )
 }
 

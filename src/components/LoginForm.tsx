@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 interface FormData {
@@ -17,6 +18,7 @@ interface LoginFormProps {
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: ''
@@ -165,16 +167,27 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister }) => {
         </button>
       </form>
 
-      <div className="mt-6 text-center">
-        <p className="text-sm text-gray-600">
-          Don't have an account?{' '}
-          <button
-            onClick={onSwitchToRegister}
-            className="text-primary-600 hover:text-primary-500 font-medium"
-          >
-            Sign up
-          </button>
-        </p>
+      <div className="mt-6 space-y-4">
+        {/* Try Demo Button */}
+        <button
+          type="button"
+          onClick={() => navigate('/demo')}
+          className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2.5 px-4 rounded-md hover:from-yellow-600 hover:to-orange-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-all font-medium shadow-md"
+        >
+          🎮 Try Demo Mode
+        </button>
+        
+        <div className="text-center">
+          <p className="text-sm text-gray-600">
+            Don't have an account?{' '}
+            <button
+              onClick={onSwitchToRegister}
+              className="text-primary-600 hover:text-primary-500 font-medium"
+            >
+              Sign up
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   )

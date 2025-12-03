@@ -1,11 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-// Option 1: Using Supabase library (original)
-// import { useFinancialData, getDateRangeForPeriod } from '../hooks/useFinancialData'
-
-// Option 2: Using direct REST API (no library dependency)
-import { useFinancialDataRest as useFinancialData, getDateRangeForPeriod } from '../hooks/useFinancialDataRest'
+import { useDemoFinancialData } from '../hooks/useDemoFinancialData'
+import { getDateRangeForPeriod } from '../hooks/useFinancialDataRest'
 import { PeriodFilter as PeriodFilterType, DateRange, Budget } from '../types/financial'
 
 import FinancialSummaryCards from './FinancialSummaryCards'
@@ -18,6 +14,7 @@ import PeriodFilter from './PeriodFilter'
 import BudgetManager from './BudgetManager'
 import BudgetProgressCards from './BudgetProgressCards'
 import ToastNotifications from './ToastNotifications'
+import DemoBanner from './DemoBanner'
 import { CardSkeleton, ChartSkeleton } from './SkeletonLoader'
 import EmptyState from './EmptyState'
 import { Plus, LogOut, Download, TrendingUp, Moon, Sun } from 'lucide-react'
@@ -25,9 +22,8 @@ import { exportToCSV, formatExportFilename } from '../utils/exportUtils'
 import { notifications } from '../utils/notifications'
 import { useTheme } from '../contexts/ThemeContext'
 
-const Dashboard: React.FC = () => {
+const DemoDashboard: React.FC = () => {
   const navigate = useNavigate()
-  const { user, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const [period, setPeriod] = useState<PeriodFilterType>('month')
   const [dateRange, setDateRange] = useState<DateRange | null>(() =>
@@ -59,7 +55,7 @@ const Dashboard: React.FC = () => {
     getCategoryBreakdown,
     getTimeSeriesData,
     getBudgetProgress,
-  } = useFinancialData(user?.id, dateRange)
+  } = useDemoFinancialData(dateRange)
 
   const handlePeriodChange = (newPeriod: PeriodFilterType) => {
     setPeriod(newPeriod)
@@ -80,7 +76,7 @@ const Dashboard: React.FC = () => {
       await addTx(transaction)
       setShowTransactionForm(false)
       setEditingTransaction(null)
-      notifications.success('Transaction added successfully')
+      notifications.info('Demo mode: Transaction would be saved in real mode')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to add transaction'
       notifications.error(message)
@@ -96,7 +92,7 @@ const Dashboard: React.FC = () => {
       await updateTx(id, updates)
       setShowTransactionForm(false)
       setEditingTransaction(null)
-      notifications.success('Transaction updated successfully')
+      notifications.info('Demo mode: Transaction would be updated in real mode')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to update transaction'
       notifications.error(message)
@@ -122,15 +118,14 @@ const Dashboard: React.FC = () => {
   const handleDeleteTransaction = async (id: string) => {
     try {
       await deleteTx(id)
-      notifications.success('Transaction deleted successfully')
+      notifications.info('Demo mode: Transaction would be deleted in real mode')
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to delete transaction'
       notifications.error(message)
     }
   }
 
-  const handleSignOut = async () => {
-    await signOut()
+  const handleSignOut = () => {
     navigate('/')
   }
 
@@ -140,9 +135,9 @@ const Dashboard: React.FC = () => {
         notifications.warning('No transactions to export')
         return
       }
-      const filename = formatExportFilename('transactions', dateRange)
+      const filename = formatExportFilename('demo-transactions', dateRange)
       exportToCSV(transactions, filename)
-      notifications.success(`Exported ${transactions.length} transactions`)
+      notifications.success(`Exported ${transactions.length} demo transactions`)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to export transactions'
       notifications.error(message)
@@ -173,6 +168,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+      <DemoBanner />
       <ToastNotifications />
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 sticky top-0 z-40 transition-colors duration-300">
@@ -180,10 +176,10 @@ const Dashboard: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 py-3 sm:py-4">
             <div className="flex-1 min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors truncate">
-                Financial Tracker
+                Financial Tracker <span className="text-yellow-600 dark:text-yellow-400 text-sm">(Demo)</span>
               </h1>
               <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 transition-colors truncate">
-                Welcome back, {user?.user_metadata?.first_name || user?.email}!
+                Welcome! You're viewing demo data.
               </p>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
@@ -215,11 +211,11 @@ const Dashboard: React.FC = () => {
                 <span className="sm:hidden">Add</span>
               </button>
               <button
-                onClick={handleSignOut}
-                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-600 transition-colors text-sm sm:text-base flex-shrink-0"
+                onClick={() => navigate('/')}
+                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-primary-600 dark:bg-primary-500 text-white rounded-md hover:bg-primary-700 dark:hover:bg-primary-600 transition-colors text-sm sm:text-base flex-shrink-0"
               >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline">Sign Out</span>
+                <span className="hidden sm:inline">Sign In</span>
+                <span className="sm:hidden">Login</span>
               </button>
             </div>
           </div>
@@ -270,12 +266,15 @@ const Dashboard: React.FC = () => {
                 categories={categories}
                 onAddBudget={async (budget: Omit<Budget, 'id' | 'created_at' | 'category'>) => {
                   await addBudget(budget)
+                  notifications.info('Demo mode: Budget would be saved in real mode')
                 }}
                 onUpdateBudget={async (id: string, updates: Partial<Budget>) => {
                   await updateBudget(id, updates)
+                  notifications.info('Demo mode: Budget would be updated in real mode')
                 }}
                 onDeleteBudget={async (id: string) => {
                   await deleteBudget(id)
+                  notifications.info('Demo mode: Budget would be deleted in real mode')
                 }}
                 currency="IDR"
               />
@@ -312,9 +311,11 @@ const Dashboard: React.FC = () => {
                 categories={categories}
                 onAddAccount={async (name, currency) => {
                   await addAccount(name, currency)
+                  notifications.info('Demo mode: Account would be saved in real mode')
                 }}
                 onAddCategory={async (name, allowedType) => {
                   await addCategory(name, allowedType)
+                  notifications.info('Demo mode: Category would be saved in real mode')
                 }}
               />
             )}
@@ -363,4 +364,5 @@ const Dashboard: React.FC = () => {
   )
 }
 
-export default Dashboard
+export default DemoDashboard
+
