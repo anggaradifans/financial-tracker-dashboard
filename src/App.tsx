@@ -4,6 +4,7 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import Dashboard from './components/Dashboard'
 import DemoDashboard from './components/DemoDashboard'
 import AuthFlow from './components/AuthFlow'
+import UpdatePassword from './components/UpdatePassword/UpdatePassword'
 import './App.css'
 
 const AppContent = () => {
@@ -38,6 +39,11 @@ const AppContent = () => {
       <Route
         path="/"
         element={user ? <Navigate to="/dashboard" replace /> : <AuthFlow />}
+      />
+
+      <Route
+        path="/update-password"
+        element={user ? <UpdatePassword /> : <Navigate to="/" replace />}
       />
       
       {/* Catch all - redirect to home */}

@@ -1,18 +1,26 @@
 import React, { useState } from 'react'
 import LoginForm from '../LoginForm'
 import RegistrationForm from '../RegistrationForm'
+import ForgotPasswordForm from './ForgotPasswordForm'
 
 const AuthFlow: React.FC = () => {
-  const [isLogin, setIsLogin] = useState(true)
+  const [view, setView] = useState<'login' | 'register' | 'forgot-password'>('login')
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center p-4">
-      {isLogin ? (
-        <LoginForm onSwitchToRegister={() => setIsLogin(false)} />
-      ) : (
-        <RegistrationForm onSwitchToLogin={() => setIsLogin(true)} />
+    <>
+      {view === 'login' && (
+        <LoginForm 
+          onSwitchToRegister={() => setView('register')} 
+          onSwitchToForgotPassword={() => setView('forgot-password')}
+        />
       )}
-    </div>
+      {view === 'register' && (
+        <RegistrationForm onSwitchToLogin={() => setView('login')} />
+      )}
+      {view === 'forgot-password' && (
+        <ForgotPasswordForm onSwitchToLogin={() => setView('login')} />
+      )}
+    </>
   )
 }
 
