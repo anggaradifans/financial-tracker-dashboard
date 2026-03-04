@@ -1,0 +1,124 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "postProcessAction": "nothing"
+      },
+      "name": "Email Read (IMAP)",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ],
+      "credentials": {
+        "imap": {
+          "id": "YOUR_IMAP_CREDENTIAL_ID",
+          "name": "My Email account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simulate parsing logic - Replace with LLM or Regex\nconst text = $input.item.json.text || \"\";\n// Example Regex for Amount\nconst amountMatch = text.match(/Amount: ([0-9]+)/);\nconst amount = amountMatch ? parseInt(amountMatch[1]) : 0;\n\nreturn {\n  amount: amount,\n  description: \"Bank Transfer\",\n  date: new Date().toISOString(),\n  raw_body: text.substring(0, 100)\n};"
+      },
+      "name": "Parse Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "transaction_staging",
+        "operation": "insert",
+        "columns": "amount, description, raw_body, status",
+        "returnAll": true
+      },
+      "name": "Insert Staging",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "YOUR_SUPABASE_CREDENTIAL_ID",
+          "name": "Supabase Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_CHAT_ID",
+        "text": "=New Transaction Detected!\nAmount: {{ $json.amount }}\nDescription: {{ $json.description }}\n\nDo you want to save this?",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            [
+              {
+                "text": "Yes, Save",
+                "callback_data": "=confirm:{{ $json.id }}"
+              },
+              {
+                "text": "No, Reject",
+                "callback_data": "=reject:{{ $json.id }}"
+              }
+            ]
+          ]
+        }
+      },
+      "name": "Telegram Bot",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Email Read (IMAP)": {
+      "main": [
+        [
+          {
+            "node": "Parse Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Email": {
+      "main": [
+        [
+          {
+            "node": "Insert Staging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Staging": {
+      "main": [
+        [
+          {
+            "node": "Telegram Bot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

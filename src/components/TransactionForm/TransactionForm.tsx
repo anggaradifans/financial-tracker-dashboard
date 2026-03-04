@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Transaction, Account, Category, TransactionType } from '../../types/financial'
 import { format } from 'date-fns'
-import { X, Loader2 } from 'lucide-react'
+import { X, Loader2, Camera } from 'lucide-react'
 import { notifications } from '../../utils/notifications'
+import { ReceiptScanner } from '../ReceiptScanner'
+import type { ParsedReceipt } from '../../lib/ocr'
 
 interface TransactionFormProps {
   transaction?: Transaction | null
@@ -35,6 +37,60 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
+
+  const handleReceiptParsed = useCallback((data: ParsedReceipt) => {
+    // Fuzzy-match merchant name against account names to auto-select account
+    const matchedAccountId = findMatchingAccount(data.merchantName, accounts)
+
+    setFormData(prev => ({
+      ...prev,
+      type: 'outcome' as TransactionType,
+      amount: data.amount?.toString() || prev.amount,
+      currency: data.currency || prev.currency,
+      occurred_at: data.date || prev.occurred_at,
+      description: buildDescription(data),
+      account_id: matchedAccountId || prev.account_id,
+    }))
+    setShowScanner(false)
+    notifications.success('Receipt data applied to form')
+  }, [accounts])
+
+  /**
+   * Fuzzy-match a merchant/bank name against the user's account list.
+   * Returns the matching account_id, or empty string if no match.
+   */
+  function findMatchingAccount(merchantName: string | null, accountList: Account[]): string {
+    if (!merchantName || accountList.length === 0) return ''
+
+    const merchant = merchantName.toLowerCase()
+    // Exact match first
+    const exact = accountList.find(a => a.name.toLowerCase() === merchant)
+    if (exact) return exact.id
+
+    // Partial match: merchant contains account name or vice versa
+    const partial = accountList.find(a =>
+      merchant.includes(a.name.toLowerCase()) ||
+      a.name.toLowerCase().includes(merchant)
+    )
+    if (partial) return partial.id
+
+    return ''
+  }
+
+  function buildDescription(data: ParsedReceipt): string {
+    const parts: string[] = []
+    // Use company/product name for description (e.g., "PT MEDIA DOKTER INVESTAMA / HALODOC")
+    if (data.companyName) parts.push(data.companyName)
+    if (data.items.length > 0) {
+      const itemNames = data.items.slice(0, 3).map(i => i.name).join(', ')
+      parts.push(itemNames)
+      if (data.items.length > 3) parts.push(`+${data.items.length - 3} more`)
+    }
+    // Fall back to merchant name if no company name found
+    if (parts.length === 0 && data.merchantName) parts.push(data.merchantName)
+    return parts.join(' — ') || ''
+  }
 
   // Filter categories based on type
   const availableCategories = categories.filter(cat => {
@@ -138,6 +194,27 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
+          {/* Receipt Scanner */}
+          {!transaction && (
+            <div className="mb-2">
+              {showScanner ? (
+                <ReceiptScanner
+                  onReceiptParsed={handleReceiptParsed}
+                  onCancel={() => setShowScanner(false)}
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowScanner(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 border border-dashed border-primary-300 dark:border-primary-600 rounded-lg text-sm text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-colors font-medium"
+                >
+                  <Camera className="h-4 w-4" />
+                  Scan Receipt
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Type */}
             <div>

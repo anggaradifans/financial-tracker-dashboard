@@ -72,3 +72,7 @@ out
 *.tmp
 *.temp
 
+
+# Playwright
+/playwright-report/
+/test-results/
