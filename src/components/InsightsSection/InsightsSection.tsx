@@ -42,31 +42,21 @@ const InsightsSection: React.FC<InsightsSectionProps> = ({
     .filter(c => c.type === 'income')
     .slice(0, 5)
 
-  // Calculate averages based on filtered transactions
-  // Standard calculation: Total spending / Total days in the selected period
-  const totalOutcome = filteredTransactions
-    .filter(t => t.type === 'outcome')
-    .reduce((sum, t) => sum + Number(t.amount), 0)
-  
-  // Calculate total days in the period
-  let totalDaysInPeriod = 1
-  if (dateRange) {
-    const start = dateRange.start
-    const end = dateRange.end
-    const diffTime = Math.abs(end.getTime() - start.getTime())
-    totalDaysInPeriod = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1 // +1 to include both start and end day
-  } else if (filteredTransactions.length > 0) {
-    // If no date range, calculate from first to last transaction
-    const dates = filteredTransactions.map(t => new Date(t.occurred_at).getTime())
-    const earliest = new Date(Math.min(...dates))
-    const latest = new Date(Math.max(...dates))
-    const diffTime = Math.abs(latest.getTime() - earliest.getTime())
-    totalDaysInPeriod = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
-  }
-  
-  const dailyAverage = totalDaysInPeriod > 0 ? totalOutcome / totalDaysInPeriod : 0
-  const weeklyAverage = dailyAverage * 7
-  const monthlyAverage = dailyAverage * 30
+  // Group outcome costs by account in the selected timeframe
+  const costByAccount = Object.values(
+    filteredTransactions
+      .filter(t => t.type === 'outcome')
+      .reduce<Record<string, { name: string; amount: number; count: number }>>((acc, t) => {
+        const accountId = t.account_id ?? 'unknown'
+        const accountName = t.account?.name ?? 'Unknown Account'
+        if (!acc[accountId]) {
+          acc[accountId] = { name: accountName, amount: 0, count: 0 }
+        }
+        acc[accountId].amount += Number(t.amount)
+        acc[accountId].count += 1
+        return acc
+      }, {})
+  ).sort((a, b) => b.amount - a.amount)
 
   // Get largest transactions from filtered data
   const largestExpense = filteredTransactions
@@ -156,32 +146,29 @@ const InsightsSection: React.FC<InsightsSectionProps> = ({
 
       {/* Averages and Largest Transactions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Average Spending */}
+        {/* Cost by Account */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
           <div className="flex items-center gap-2 mb-3 sm:mb-4">
             <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500 dark:text-blue-400" />
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white transition-colors">Average Spending</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white transition-colors">Cost by Account</h3>
           </div>
-          <div className="space-y-2 sm:space-y-3">
-            <div>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 transition-colors">Daily Average</p>
-              <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white transition-colors">
-                {formatCurrency(dailyAverage)}
-              </p>
+          {costByAccount.length === 0 ? (
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 transition-colors">No outcome data available</p>
+          ) : (
+            <div className="space-y-2 sm:space-y-3">
+              {costByAccount.map(account => (
+                <div key={account.name} className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs sm:text-sm font-medium text-gray-800 dark:text-white transition-colors">{account.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors">{account.count} transactions</p>
+                  </div>
+                  <p className="text-sm sm:text-base font-semibold text-red-600 dark:text-red-400 transition-colors">
+                    {formatCurrency(account.amount)}
+                  </p>
+                </div>
+              ))}
             </div>
-            <div>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 transition-colors">Weekly Average</p>
-              <p className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 transition-colors">
-                {formatCurrency(weeklyAverage)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 transition-colors">Monthly Average</p>
-              <p className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-300 transition-colors">
-                {formatCurrency(monthlyAverage)}
-              </p>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Largest Expense */}

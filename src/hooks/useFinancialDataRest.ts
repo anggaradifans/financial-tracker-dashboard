@@ -148,15 +148,17 @@ export const useFinancialDataRest = (userId: string | undefined, dateRange: Date
         type: transaction.type,
         user_id: userId || null,
       }
-      
+
       const result = await supabaseRest.insert<Transaction[]>('transactions', dbTransaction)
 
       const rawData = Array.isArray(result) ? result[0] : result
       const data = rawData ? {
         ...rawData,
         type: rawData.type,
+        account: accounts.find(a => a.id === rawData.account_id) || null,
+        category: categories.find(c => c.id === rawData.category_id) || null,
       } as Transaction : null
-      
+
       if (data) {
         setTransactions(prev => [data, ...prev])
       }
@@ -173,12 +175,14 @@ export const useFinancialDataRest = (userId: string | undefined, dateRange: Date
         ...updates,
         type: updates.type,
       }
-      
+
       const result = await supabaseRest.update<any[]>('transactions', dbUpdates, { id })
       const rawData = Array.isArray(result) ? result[0] : result
       const data = rawData ? {
         ...rawData,
         type: rawData.type,
+        account: accounts.find(a => a.id === rawData.account_id) || null,
+        category: categories.find(c => c.id === rawData.category_id) || null,
       } as Transaction : null
 
       if (data) {
