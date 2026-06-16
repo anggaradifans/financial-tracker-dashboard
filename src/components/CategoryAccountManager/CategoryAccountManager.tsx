@@ -1,37 +1,39 @@
 import React, { useState } from 'react'
 import { Account, Category, CategoryAllowedType } from '../../types/financial'
-import { Plus } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { notifications } from '../../utils/notifications'
 
 interface CategoryAccountManagerProps {
   accounts: Account[]
   categories: Category[]
   onAddAccount: (name: string, currency: string) => Promise<void>
+  onDeleteAccount: (id: string) => Promise<void>
   onAddCategory: (name: string, allowedType: CategoryAllowedType) => Promise<void>
+  onDeleteCategory: (id: string) => Promise<void>
 }
 
 const CategoryAccountManager: React.FC<CategoryAccountManagerProps> = ({
   accounts,
   categories,
   onAddAccount,
+  onDeleteAccount,
   onAddCategory,
+  onDeleteCategory,
 }) => {
   const [showAccountForm, setShowAccountForm] = useState(false)
   const [showCategoryForm, setShowCategoryForm] = useState(false)
-  const [accountFormData, setAccountFormData] = useState({
-    name: '',
-    currency: 'IDR',
-  })
+  const [accountFormData, setAccountFormData] = useState({ name: '', currency: 'IDR' })
   const [categoryFormData, setCategoryFormData] = useState({
     name: '',
     allowed_type: 'both' as CategoryAllowedType,
   })
   const [loading, setLoading] = useState(false)
+  const [pendingDeleteAccountId, setPendingDeleteAccountId] = useState<string | null>(null)
+  const [pendingDeleteCategoryId, setPendingDeleteCategoryId] = useState<string | null>(null)
 
   const handleAddAccount = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!accountFormData.name.trim()) return
-
     setLoading(true)
     try {
       await onAddAccount(accountFormData.name.trim(), accountFormData.currency)
@@ -39,8 +41,20 @@ const CategoryAccountManager: React.FC<CategoryAccountManagerProps> = ({
       setShowAccountForm(false)
       notifications.success('Account added successfully')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to add account'
-      notifications.error(message)
+      notifications.error(error instanceof Error ? error.message : 'Failed to add account')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteAccount = async (id: string) => {
+    setLoading(true)
+    try {
+      await onDeleteAccount(id)
+      setPendingDeleteAccountId(null)
+      notifications.success('Account deleted')
+    } catch (error) {
+      notifications.error(error instanceof Error ? error.message : 'Failed to delete account')
     } finally {
       setLoading(false)
     }
@@ -49,7 +63,6 @@ const CategoryAccountManager: React.FC<CategoryAccountManagerProps> = ({
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!categoryFormData.name.trim()) return
-
     setLoading(true)
     try {
       await onAddCategory(categoryFormData.name.trim(), categoryFormData.allowed_type)
@@ -57,19 +70,36 @@ const CategoryAccountManager: React.FC<CategoryAccountManagerProps> = ({
       setShowCategoryForm(false)
       notifications.success('Category added successfully')
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to add category'
-      notifications.error(message)
+      notifications.error(error instanceof Error ? error.message : 'Failed to add category')
     } finally {
       setLoading(false)
     }
   }
 
+  const handleDeleteCategory = async (id: string) => {
+    setLoading(true)
+    try {
+      await onDeleteCategory(id)
+      setPendingDeleteCategoryId(null)
+      notifications.success('Category deleted')
+    } catch (error) {
+      notifications.error(error instanceof Error ? error.message : 'Failed to delete category')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const inputClass = 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors'
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-      {/* Accounts Section */}
+
+      {/* Accounts */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 mb-4">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white transition-colors">Accounts</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white transition-colors">
+            Accounts <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({accounts.length})</span>
+          </h3>
           <button
             onClick={() => setShowAccountForm(!showAccountForm)}
             className="flex items-center justify-center gap-2 px-3 py-1.5 bg-primary-600 dark:bg-primary-500 text-white text-xs sm:text-sm rounded-md hover:bg-primary-700 dark:hover:bg-primary-600 transition-colors"
@@ -85,18 +115,14 @@ const CategoryAccountManager: React.FC<CategoryAccountManagerProps> = ({
               type="text"
               placeholder="Account name"
               value={accountFormData.name}
-              onChange={(e) =>
-                setAccountFormData({ ...accountFormData, name: e.target.value })
-              }
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
+              onChange={(e) => setAccountFormData({ ...accountFormData, name: e.target.value })}
+              className={inputClass}
               required
             />
             <select
               value={accountFormData.currency}
-              onChange={(e) =>
-                setAccountFormData({ ...accountFormData, currency: e.target.value })
-              }
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
+              onChange={(e) => setAccountFormData({ ...accountFormData, currency: e.target.value })}
+              className={inputClass}
             >
               <option value="IDR">IDR</option>
               <option value="USD">USD</option>
@@ -112,10 +138,7 @@ const CategoryAccountManager: React.FC<CategoryAccountManagerProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setShowAccountForm(false)
-                  setAccountFormData({ name: '', currency: 'IDR' })
-                }}
+                onClick={() => { setShowAccountForm(false); setAccountFormData({ name: '', currency: 'IDR' }) }}
                 className="px-3 py-2 bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded-md hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
               >
                 Cancel
@@ -131,22 +154,51 @@ const CategoryAccountManager: React.FC<CategoryAccountManagerProps> = ({
             accounts.map((account) => (
               <div
                 key={account.id}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-md transition-colors"
               >
                 <div>
                   <p className="font-medium text-gray-900 dark:text-white transition-colors">{account.name}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors">{account.currency}</p>
                 </div>
+
+                {pendingDeleteAccountId === account.id ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Delete?</span>
+                    <button
+                      onClick={() => handleDeleteAccount(account.id)}
+                      disabled={loading}
+                      className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                    >
+                      Yes
+                    </button>
+                    <button
+                      onClick={() => setPendingDeleteAccountId(null)}
+                      className="px-2 py-1 text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
+                    >
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setPendingDeleteAccountId(account.id)}
+                    aria-label={`Delete account ${account.name}`}
+                    className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             ))
           )}
         </div>
       </div>
 
-      {/* Categories Section */}
+      {/* Categories */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 mb-4">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white transition-colors">Categories</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white transition-colors">
+            Categories <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({categories.length})</span>
+          </h3>
           <button
             onClick={() => setShowCategoryForm(!showCategoryForm)}
             className="flex items-center justify-center gap-2 px-3 py-1.5 bg-primary-600 dark:bg-primary-500 text-white text-xs sm:text-sm rounded-md hover:bg-primary-700 dark:hover:bg-primary-600 transition-colors"
@@ -162,21 +214,14 @@ const CategoryAccountManager: React.FC<CategoryAccountManagerProps> = ({
               type="text"
               placeholder="Category name"
               value={categoryFormData.name}
-              onChange={(e) =>
-                setCategoryFormData({ ...categoryFormData, name: e.target.value })
-              }
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
+              onChange={(e) => setCategoryFormData({ ...categoryFormData, name: e.target.value })}
+              className={inputClass}
               required
             />
             <select
               value={categoryFormData.allowed_type}
-              onChange={(e) =>
-                setCategoryFormData({
-                  ...categoryFormData,
-                  allowed_type: e.target.value as CategoryAllowedType,
-                })
-              }
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
+              onChange={(e) => setCategoryFormData({ ...categoryFormData, allowed_type: e.target.value as CategoryAllowedType })}
+              className={inputClass}
             >
               <option value="both">Both Income & Outcome</option>
               <option value="income">Income Only</option>
@@ -192,10 +237,7 @@ const CategoryAccountManager: React.FC<CategoryAccountManagerProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setShowCategoryForm(false)
-                  setCategoryFormData({ name: '', allowed_type: 'both' })
-                }}
+                onClick={() => { setShowCategoryForm(false); setCategoryFormData({ name: '', allowed_type: 'both' }) }}
                 className="px-3 py-2 bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded-md hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
               >
                 Cancel
@@ -211,21 +253,47 @@ const CategoryAccountManager: React.FC<CategoryAccountManagerProps> = ({
             categories.map((category) => (
               <div
                 key={category.id}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-md transition-colors"
               >
                 <div>
                   <p className="font-medium text-gray-900 dark:text-white transition-colors">{category.name}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 capitalize transition-colors">
-                    {category.allowed_type === 'both'
-                      ? 'Income & Outcome'
-                      : category.allowed_type}
+                    {category.allowed_type === 'both' ? 'Income & Outcome' : category.allowed_type}
                   </p>
                 </div>
+
+                {pendingDeleteCategoryId === category.id ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Delete?</span>
+                    <button
+                      onClick={() => handleDeleteCategory(category.id)}
+                      disabled={loading}
+                      className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                    >
+                      Yes
+                    </button>
+                    <button
+                      onClick={() => setPendingDeleteCategoryId(null)}
+                      className="px-2 py-1 text-xs bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors"
+                    >
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setPendingDeleteCategoryId(category.id)}
+                    aria-label={`Delete category ${category.name}`}
+                    className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             ))
           )}
         </div>
       </div>
+
     </div>
   )
 }

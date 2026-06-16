@@ -237,6 +237,26 @@ export const useFinancialDataRest = (userId: string | undefined, dateRange: Date
     }
   }
 
+  const deleteAccount = async (id: string) => {
+    try {
+      await supabaseRest.delete('accounts', { id })
+      setAccounts(prev => prev.filter(a => a.id !== id))
+    } catch (err) {
+      devError('[useFinancialDataRest] Error deleting account:', err)
+      throw err
+    }
+  }
+
+  const deleteCategory = async (id: string) => {
+    try {
+      await supabaseRest.delete('categories', { id })
+      setCategories(prev => prev.filter(c => c.id !== id))
+    } catch (err) {
+      devError('[useFinancialDataRest] Error deleting category:', err)
+      throw err
+    }
+  }
+
   const addBudget = async (budget: Omit<Budget, 'id' | 'created_at' | 'category'>) => {
     try {
       const result = await supabaseRest.insert<Budget[]>('budgets', {
@@ -549,7 +569,9 @@ export const useFinancialDataRest = (userId: string | undefined, dateRange: Date
     updateTransaction,
     deleteTransaction,
     addAccount,
+    deleteAccount,
     addCategory,
+    deleteCategory,
     addBudget,
     updateBudget,
     deleteBudget,

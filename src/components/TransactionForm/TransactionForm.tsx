@@ -124,13 +124,14 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50 p-0 sm:p-4 animate-fadeIn">
-      <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-lg shadow-xl max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto animate-scaleIn transition-colors duration-300">
+      <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-lg shadow-xl max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto pb-safe animate-scaleIn transition-colors duration-300">
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center transition-colors">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white transition-colors">
             {transaction ? 'Edit Transaction' : 'Add Transaction'}
           </h2>
           <button
             onClick={onCancel}
+            aria-label="Close form"
             className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           >
             <X className="h-6 w-6" />
@@ -302,7 +303,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
             </button>
             <button
               type="submit"
-              className="w-full px-4 py-2 bg-primary-600 dark:bg-primary-500 text-white rounded-md hover:bg-primary-700 dark:hover:bg-primary-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="px-6 py-2 bg-primary-600 dark:bg-primary-500 text-white rounded-md hover:bg-primary-700 dark:hover:bg-primary-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               disabled={loading}
             >
               {loading ? (

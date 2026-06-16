@@ -105,7 +105,7 @@ const UpdatePassword: React.FC = () => {
             </div>
 
             <div className="relative z-10">
-              <p className="text-sm text-slate-500">© 2024 Finance Tracker Platform</p>
+              <p className="text-sm text-slate-500">© {new Date().getFullYear()} Finance Tracker Platform</p>
             </div>
           </div>
 

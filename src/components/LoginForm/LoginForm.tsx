@@ -150,7 +150,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister, onSwitchToFor
               <blockquote className="text-lg text-slate-300 italic font-light border-l-4 border-blue-500 pl-4 my-6">
                 "Track every Sen, grow every Rupiah."
               </blockquote>
-              <p className="text-sm text-slate-500">© 2024 Finance Tracker Platform</p>
+              <p className="text-sm text-slate-500">© {new Date().getFullYear()} Finance Tracker Platform</p>
             </div>
           </div>
 
@@ -205,12 +205,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister, onSwitchToFor
                       <label htmlFor="password" className="text-sm font-medium text-slate-300">
                         Password
                       </label>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         onClick={onSwitchToForgotPassword}
                         className="text-sm text-blue-400 hover:text-blue-300 transition-colors font-medium"
                       >
-                        Forgot?
+                        Forgot password?
                       </button>
                     </div>
                     <div className="relative group">
@@ -235,6 +235,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister, onSwitchToFor
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
                         className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white transition-colors cursor-pointer"
                       >
                        {showPassword ? (

@@ -18,9 +18,10 @@ import PeriodFilter from '../PeriodFilter'
 import BudgetManager from '../BudgetManager'
 import BudgetProgressCards from '../BudgetProgressCards'
 import ToastNotifications from '../ToastNotifications'
+import ConfirmDialog from '../ConfirmDialog'
 import { CardSkeleton, ChartSkeleton } from '../SkeletonLoader'
 import EmptyState from '../EmptyState'
-import { Plus, LogOut, Download, TrendingUp, Moon, Sun } from 'lucide-react'
+import { Plus, LogOut, Download, TrendingUp, Moon, Sun, Settings } from 'lucide-react'
 import { exportToCSV, formatExportFilename } from '../../utils/exportUtils'
 import { notifications } from '../../utils/notifications'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -35,8 +36,9 @@ const Dashboard: React.FC = () => {
   )
   const [showTransactionForm, setShowTransactionForm] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<any>(null)
-  const [showManagePanel] = useState(false)
+  const [showManagePanel, setShowManagePanel] = useState(false)
   const [showBudgetPanel, setShowBudgetPanel] = useState(false)
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
   const [showAmounts, setShowAmounts] = useState(false)
 
   const {
@@ -51,7 +53,9 @@ const Dashboard: React.FC = () => {
     updateTransaction: updateTx,
     deleteTransaction: deleteTx,
     addAccount,
+    deleteAccount,
     addCategory,
+    deleteCategory,
     addBudget,
     updateBudget,
     deleteBudget,
@@ -130,6 +134,7 @@ const Dashboard: React.FC = () => {
   }
 
   const handleSignOut = async () => {
+    setShowSignOutConfirm(false)
     await signOut()
     navigate('/')
   }
@@ -190,14 +195,26 @@ const Dashboard: React.FC = () => {
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
-                title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+                aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
               >
                 {theme === 'light' ? <Moon className="h-4 w-4 sm:h-5 sm:w-5" /> : <Sun className="h-4 w-4 sm:h-5 sm:w-5" />}
               </button>
               <button
+                onClick={() => setShowManagePanel(!showManagePanel)}
+                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 rounded-md transition-colors text-sm sm:text-base flex-shrink-0 ${
+                  showManagePanel
+                    ? 'bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-white'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+                aria-label="Manage categories and accounts"
+              >
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">Manage</span>
+              </button>
+              <button
                 onClick={handleExport}
                 className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-green-600 dark:bg-green-700 text-white rounded-md hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-sm sm:text-base flex-shrink-0"
-                title="Export transactions to CSV"
+                aria-label="Export transactions to CSV"
               >
                 <Download className="h-4 w-4" />
                 <span className="hidden sm:inline">Export CSV</span>
@@ -215,8 +232,8 @@ const Dashboard: React.FC = () => {
                 <span className="sm:hidden">Add</span>
               </button>
               <button
-                onClick={handleSignOut}
-                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-600 transition-colors text-sm sm:text-base flex-shrink-0"
+                onClick={() => setShowSignOutConfirm(true)}
+                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm sm:text-base flex-shrink-0"
               >
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline">Sign Out</span>
@@ -235,6 +252,18 @@ const Dashboard: React.FC = () => {
           onPeriodChange={handlePeriodChange}
           onCustomRangeChange={handleCustomRangeChange}
         />
+
+        {/* Category & Account Management */}
+        {showManagePanel && (
+          <CategoryAccountManager
+            accounts={accounts}
+            categories={categories}
+            onAddAccount={async (name, currency) => { await addAccount(name, currency) }}
+            onDeleteAccount={async (id) => { await deleteAccount(id) }}
+            onAddCategory={async (name, allowedType) => { await addCategory(name, allowedType) }}
+            onDeleteCategory={async (id) => { await deleteCategory(id) }}
+          />
+        )}
 
         {/* Financial Summary Cards */}
         {loading ? (
@@ -305,20 +334,6 @@ const Dashboard: React.FC = () => {
               />
             ) : null}
 
-            {/* Category & Account Management */}
-            {showManagePanel && (
-              <CategoryAccountManager
-                accounts={accounts}
-                categories={categories}
-                onAddAccount={async (name, currency) => {
-                  await addAccount(name, currency)
-                }}
-                onAddCategory={async (name, allowedType) => {
-                  await addCategory(name, allowedType)
-                }}
-              />
-            )}
-
             {/* Insights Section */}
             {transactions.length > 0 && (
               <InsightsSection
@@ -332,6 +347,8 @@ const Dashboard: React.FC = () => {
             {/* Transactions Table */}
             <TransactionTable
               transactions={transactions}
+              accounts={accounts}
+              categories={categories}
               onEdit={handleEditTransaction}
               onDelete={handleDeleteTransaction}
               loading={loading}
@@ -359,6 +376,18 @@ const Dashboard: React.FC = () => {
           currency="IDR"
         />
       )}
+
+      {/* Sign Out Confirmation */}
+      <ConfirmDialog
+        isOpen={showSignOutConfirm}
+        title="Sign Out"
+        message="Are you sure you want to sign out?"
+        confirmLabel="Sign Out"
+        cancelLabel="Cancel"
+        variant="warning"
+        onConfirm={handleSignOut}
+        onCancel={() => setShowSignOutConfirm(false)}
+      />
     </div>
   )
 }

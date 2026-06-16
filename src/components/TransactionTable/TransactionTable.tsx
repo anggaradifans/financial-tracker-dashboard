@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { Transaction, TransactionType } from '../../types/financial'
+import { Transaction, TransactionType, Account, Category } from '../../types/financial'
 import { format } from 'date-fns'
 import { Edit, Trash2, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
 import { TableRowSkeleton } from '../SkeletonLoader'
@@ -14,6 +14,8 @@ interface TransactionTableProps {
   loading?: boolean
   currency?: string
   onAddTransaction?: () => void
+  accounts?: Account[]
+  categories?: Category[]
 }
 
 const TransactionTable: React.FC<TransactionTableProps> = ({
@@ -23,10 +25,14 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   loading,
   currency = 'IDR',
   onAddTransaction,
+  accounts = [],
+  categories = [],
 }) => {
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; description: string } | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState<TransactionType | 'all'>('all')
+  const [accountFilter, setAccountFilter] = useState<string>('all')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [currentPage, setCurrentPage] = useState(1)
@@ -50,7 +56,9 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
           t.category?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           t.account?.name.toLowerCase().includes(searchTerm.toLowerCase())
         const matchesType = typeFilter === 'all' || t.type === typeFilter
-        return matchesSearch && matchesType
+        const matchesAccount = accountFilter === 'all' || t.account_id === accountFilter
+        const matchesCategory = categoryFilter === 'all' || t.category_id === categoryFilter
+        return matchesSearch && matchesType && matchesAccount && matchesCategory
       })
       .sort((a, b) => {
         let comparison = 0
@@ -62,7 +70,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
         }
         return sortOrder === 'asc' ? comparison : -comparison
       })
-  }, [transactions, searchTerm, typeFilter, sortBy, sortOrder])
+  }, [transactions, searchTerm, typeFilter, accountFilter, categoryFilter, sortBy, sortOrder])
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredAndSortedTransactions.length / itemsPerPage)
@@ -73,7 +81,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, typeFilter, sortBy, sortOrder])
+  }, [searchTerm, typeFilter, accountFilter, categoryFilter, sortBy, sortOrder])
 
   const filteredTransactions = paginatedTransactions
 
@@ -115,30 +123,58 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 transition-colors duration-300">
       {/* Filters */}
       <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 transition-colors">
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-          <div className="flex-1 relative">
+        <div className="flex flex-col gap-3">
+          {/* Row 1: Search */}
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Search transactions..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
+              className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
             />
           </div>
-          <div className="flex gap-2 items-center">
-            <Filter className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 dark:text-gray-500" />
+          {/* Row 2: Dropdowns */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <Filter className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
             <select
               value={typeFilter}
-              onChange={(e) =>
-                setTypeFilter(e.target.value as TransactionType | 'all')
-              }
-              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
+              onChange={(e) => setTypeFilter(e.target.value as TransactionType | 'all')}
+              className="flex-1 min-w-[110px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
             >
               <option value="all">All Types</option>
               <option value="income">Income</option>
               <option value="outcome">Outcome</option>
             </select>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="flex-1 min-w-[130px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
+            >
+              <option value="all">All Categories</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            <select
+              value={accountFilter}
+              onChange={(e) => setAccountFilter(e.target.value)}
+              className="flex-1 min-w-[130px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
+            >
+              <option value="all">All Accounts</option>
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+            {(typeFilter !== 'all' || accountFilter !== 'all' || categoryFilter !== 'all' || searchTerm) && (
+              <button
+                onClick={() => { setTypeFilter('all'); setAccountFilter('all'); setCategoryFilter('all'); setSearchTerm('') }}
+                className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
         </div>
       </div>
