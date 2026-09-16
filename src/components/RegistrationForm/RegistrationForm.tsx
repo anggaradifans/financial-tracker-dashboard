@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { supabase } from '../../lib/supabase'
-import { supabaseRest } from '../../lib/supabaseRest'
 
 interface FormData {
   email: string
@@ -88,7 +87,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSwitchToLogin }) 
     setErrors({})
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -103,21 +102,6 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSwitchToLogin }) 
         setErrors({ general: error.message })
         setIsLoading(false)
         return
-      }
-
-      if (data?.user?.id) {
-        try {
-          await supabaseRest.rpc('create_telegram_user_record', {
-            app_user_id: data.user.id,
-            user_first_name: formData.firstName,
-            user_last_name: formData.lastName,
-            telegram_id: null,
-            telegram_username: null,
-            language_code: null,
-          })
-        } catch (telegramError) {
-          console.error('Failed to create telegram_users record:', telegramError)
-        }
       }
 
       setIsSuccess(true)

@@ -10,6 +10,7 @@ interface CategoryAccountManagerProps {
   onDeleteAccount: (id: string) => Promise<void>
   onAddCategory: (name: string, allowedType: CategoryAllowedType) => Promise<void>
   onDeleteCategory: (id: string) => Promise<void>
+  canDeleteCategory?: (category: Category) => boolean
 }
 
 const CategoryAccountManager: React.FC<CategoryAccountManagerProps> = ({
@@ -19,6 +20,7 @@ const CategoryAccountManager: React.FC<CategoryAccountManagerProps> = ({
   onDeleteAccount,
   onAddCategory,
   onDeleteCategory,
+  canDeleteCategory = () => true,
 }) => {
   const [showAccountForm, setShowAccountForm] = useState(false)
   const [showCategoryForm, setShowCategoryForm] = useState(false)
@@ -262,7 +264,9 @@ const CategoryAccountManager: React.FC<CategoryAccountManagerProps> = ({
                   </p>
                 </div>
 
-                {pendingDeleteCategoryId === category.id ? (
+                {!canDeleteCategory(category) ? (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Shared default</span>
+                ) : pendingDeleteCategoryId === category.id ? (
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-500 dark:text-gray-400">Delete?</span>
                     <button

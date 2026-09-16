@@ -1,12 +1,27 @@
-// Direct Supabase REST API client (no library dependency)
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+import { supabase } from './supabase'
 
-if (!supabaseUrl || !supabaseServiceRoleKey) {
-  throw new Error('Missing Supabase environment variables (VITE_SUPABASE_URL and VITE_SUPABASE_SERVICE_ROLE_KEY required)')
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY required)')
 }
 
 const REST_URL = `${supabaseUrl}/rest/v1`
+
+async function authenticatedHeaders(): Promise<Record<string, string>> {
+  // Read the current session for every request so refreshed tokens are used.
+  const { data: { session }, error } = await supabase.auth.getSession()
+  if (error) throw error
+  if (!session?.access_token) throw new Error('Please sign in to access your financial data.')
+
+  return {
+    apikey: supabaseAnonKey,
+    Authorization: `Bearer ${session.access_token}`,
+    'Content-Type': 'application/json',
+    Prefer: 'return=representation',
+  }
+}
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
@@ -39,11 +54,8 @@ export const supabaseRest = {
     const response = await fetch(url.toString(), {
       method,
       headers: {
-        'apikey': supabaseServiceRoleKey,
-        'Authorization': `Bearer ${supabaseServiceRoleKey}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation',
         ...headers,
+        ...await authenticatedHeaders(),
       },
       body: body ? JSON.stringify(body) : undefined,
     })
@@ -53,7 +65,11 @@ export const supabaseRest = {
       throw new Error(`Supabase API error: ${response.status} - ${errorData}`)
     }
 
-    const data = await response.json()
+    const text = await response.text()
+    const data = text ? JSON.parse(text) : null
+    if ((method === 'PATCH' || method === 'DELETE') && Array.isArray(data) && data.length === 0) {
+      throw new Error('This record is unavailable or you do not have permission to change it.')
+    }
     return data as T
   },
 
@@ -118,12 +134,7 @@ export const supabaseRest = {
 
     const response = await fetch(url.toString(), {
       method: 'GET',
-      headers: {
-        'apikey': supabaseServiceRoleKey,
-        'Authorization': `Bearer ${supabaseServiceRoleKey}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation',
-      },
+      headers: await authenticatedHeaders(),
     })
 
     if (!response.ok) {
@@ -181,12 +192,7 @@ export const supabaseRest = {
     
     const response = await fetch(url.toString(), {
       method: 'POST',
-      headers: {
-        'apikey': supabaseServiceRoleKey,
-        'Authorization': `Bearer ${supabaseServiceRoleKey}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation',
-      },
+      headers: await authenticatedHeaders(),
       body: JSON.stringify(params),
     })
 
@@ -208,6 +214,4 @@ export const supabaseRest = {
     }
   },
 }
-
-// REST client initialized
 

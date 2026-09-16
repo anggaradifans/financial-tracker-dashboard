@@ -1,10 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-// Option 1: Using Supabase library (original)
-// import { useFinancialData, getDateRangeForPeriod } from '../../hooks/useFinancialData'
-
-// Option 2: Using direct REST API (no library dependency)
 import { useFinancialDataRest as useFinancialData, getDateRangeForPeriod } from '../../hooks/useFinancialDataRest'
 import { PeriodFilter as PeriodFilterType, DateRange, Budget } from '../../types/financial'
 
@@ -262,6 +258,7 @@ const Dashboard: React.FC = () => {
             onDeleteAccount={async (id) => { await deleteAccount(id) }}
             onAddCategory={async (name, allowedType) => { await addCategory(name, allowedType) }}
             onDeleteCategory={async (id) => { await deleteCategory(id) }}
+            canDeleteCategory={(category) => !!user && category.user_id === user.id}
           />
         )}
 

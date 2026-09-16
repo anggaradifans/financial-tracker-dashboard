@@ -28,6 +28,7 @@ export interface Account {
 
 export interface Category {
   id: string
+  user_id?: string | null
   name: string
   allowed_type: CategoryAllowedType
   created_at: string

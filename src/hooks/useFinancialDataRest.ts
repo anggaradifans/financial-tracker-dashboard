@@ -13,7 +13,7 @@ import {
   BudgetProgress,
 } from '../types/financial'
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns'
-import { devLog, devError } from '../utils/notifications'
+import { devError } from '../utils/notifications'
 
 export const useFinancialDataRest = (userId: string | undefined, dateRange: DateRange | null) => {
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -24,7 +24,14 @@ export const useFinancialDataRest = (userId: string | undefined, dateRange: Date
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    devLog('[useFinancialDataRest] Fetching data...', userId ? `Filtering by userId: ${userId}` : 'Fetching all data')
+    if (!userId) {
+      setTransactions([])
+      setAccounts([])
+      setCategories([])
+      setBudgets([])
+      setLoading(false)
+      return
+    }
     fetchAllData()
   }, [userId, dateRange])
 
@@ -64,7 +71,7 @@ export const useFinancialDataRest = (userId: string | undefined, dateRange: Date
         order: 'occurred_at.desc',
       }
 
-      // Filter by userId only if provided (optional with service_role key)
+      // RLS enforces ownership; this filter also scopes the requested result.
       if (userId) {
         query.eq = { user_id: userId }
       }
@@ -136,17 +143,17 @@ export const useFinancialDataRest = (userId: string | undefined, dateRange: Date
       setBudgets(transformedData || [])
     } catch (err) {
       devError('[useFinancialDataRest] Error fetching budgets:', err)
-      // Budgets table might not exist yet, so don't throw error
-      setBudgets([])
+      throw err
     }
   }
 
   const addTransaction = async (transaction: Omit<Transaction, 'id' | 'created_at' | 'account' | 'category'>) => {
     try {
+      if (!userId) throw new Error('Please sign in to add a transaction.')
       const dbTransaction = {
         ...transaction,
         type: transaction.type,
-        user_id: userId || null,
+        user_id: userId,
       }
 
       const result = await supabaseRest.insert<Transaction[]>('transactions', dbTransaction)
@@ -224,7 +231,8 @@ export const useFinancialDataRest = (userId: string | undefined, dateRange: Date
 
   const addCategory = async (name: string, allowed_type: 'income' | 'outcome' | 'both' = 'both') => {
     try {
-      const result = await supabaseRest.insert<Category[]>('categories', { name, allowed_type })
+      if (!userId) throw new Error('Please sign in to add a category.')
+      const result = await supabaseRest.insert<Category[]>('categories', { name, allowed_type, user_id: userId })
       const data = Array.isArray(result) ? result[0] : result
 
       if (data) {
@@ -249,6 +257,10 @@ export const useFinancialDataRest = (userId: string | undefined, dateRange: Date
 
   const deleteCategory = async (id: string) => {
     try {
+      const category = categories.find(item => item.id === id)
+      if (!userId || category?.user_id !== userId) {
+        throw new Error('Only your custom categories can be deleted. Shared defaults are read-only.')
+      }
       await supabaseRest.delete('categories', { id })
       setCategories(prev => prev.filter(c => c.id !== id))
     } catch (err) {
@@ -259,9 +271,10 @@ export const useFinancialDataRest = (userId: string | undefined, dateRange: Date
 
   const addBudget = async (budget: Omit<Budget, 'id' | 'created_at' | 'category'>) => {
     try {
+      if (!userId) throw new Error('Please sign in to add a budget.')
       const result = await supabaseRest.insert<Budget[]>('budgets', {
         ...budget,
-        user_id: userId || null,
+        user_id: userId,
       })
       const data = Array.isArray(result) ? result[0] : result
       if (data) {
@@ -616,4 +629,3 @@ export const getDateRangeForPeriod = (period: 'today' | 'week' | 'month' | 'year
       }
   }
 }
-
