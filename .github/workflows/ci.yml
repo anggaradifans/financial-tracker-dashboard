@@ -17,10 +17,14 @@ jobs:
       - run: npm ci --legacy-peer-deps
       - run: npm run lint
       - run: npm run test:security
-      - name: Test database isolation
+      - name: Install PostgreSQL server
         run: |
-          echo "$(pg_config --bindir)" >> "$GITHUB_PATH"
-          npm run test:database
+          sudo apt-get update
+          sudo apt-get install --yes postgresql
+      - name: Add PostgreSQL binaries to PATH
+        run: echo "$(pg_config --bindir)" >> "$GITHUB_PATH"
+      - name: Test database isolation
+        run: npm run test:database
       - run: npm run build
 
   e2e:
