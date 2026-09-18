@@ -8,7 +8,7 @@ import UpdatePassword from './components/UpdatePassword/UpdatePassword'
 import './App.css'
 
 const AppContent = () => {
-  const { user, loading } = useAuth()
+  const { user, loading, error: authError } = useAuth()
 
   if (loading) {
     return (
@@ -25,7 +25,13 @@ const AppContent = () => {
   }
 
   return (
-    <Routes>
+    <>
+      {authError && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-red-700 px-4 py-3 text-center text-sm text-white" role="alert">
+          {authError}
+        </div>
+      )}
+      <Routes>
       {/* Demo route - accessible without authentication */}
       <Route path="/demo" element={<DemoDashboard />} />
       
@@ -48,7 +54,8 @@ const AppContent = () => {
       
       {/* Catch all - redirect to home */}
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </>
   )
 }
 

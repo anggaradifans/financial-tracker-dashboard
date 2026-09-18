@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - run: npm run lint
+      - run: npm run test:security
+      - name: Install PostgreSQL server
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql
+      - name: Add PostgreSQL binaries to PATH
+        run: echo "$(pg_config --bindir)" >> "$GITHUB_PATH"
+      - name: Test database isolation
+        run: npm run test:database
+      - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      VITE_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
+      VITE_SUPABASE_ANON_KEY: ${{ secrets.E2E_SUPABASE_PUBLISHABLE_KEY }}
+      E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+    steps:
+      - name: Check E2E configuration
+        id: config
+        run: |
+          if [ -n "$E2E_EMAIL" ] && [ -n "$E2E_PASSWORD" ] && [ -n "$VITE_SUPABASE_URL" ] && [ -n "$VITE_SUPABASE_ANON_KEY" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.config.outputs.available == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.config.outputs.available == 'true'
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+        if: steps.config.outputs.available == 'true'
+      - run: npx playwright install --with-deps chromium
+        if: steps.config.outputs.available == 'true'
+      - run: npm run build && npm run test:e2e
+        if: steps.config.outputs.available == 'true'

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Transaction,
   Account,
@@ -12,11 +12,10 @@ import {
   BudgetProgress,
 } from '../types/financial'
 import { demoTransactions, demoAccounts, demoCategories, demoBudgets, DEMO_USER_ID } from '../data/demoData'
-import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns'
 
 export const useDemoFinancialData = (dateRange: DateRange | null) => {
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const error: string | null = null
 
   // Filter transactions by date range
   const filteredTransactions = useMemo(() => {
@@ -56,7 +55,7 @@ export const useDemoFinancialData = (dateRange: DateRange | null) => {
     } as Transaction
   }
 
-  const deleteTransaction = async (id: string) => {
+  const deleteTransaction = async (_id: string) => {
     // In demo mode, we don't actually delete
     return Promise.resolve()
   }
@@ -70,6 +69,8 @@ export const useDemoFinancialData = (dateRange: DateRange | null) => {
     } as Account
   }
 
+  const deleteAccount = async (_id: string) => Promise.resolve()
+
   const addCategory = async (name: string, allowed_type: 'income' | 'outcome' | 'both' = 'both') => {
     return {
       id: `demo-cat-${Date.now()}`,
@@ -78,6 +79,8 @@ export const useDemoFinancialData = (dateRange: DateRange | null) => {
       created_at: new Date().toISOString(),
     } as Category
   }
+
+  const deleteCategory = async (_id: string) => Promise.resolve()
 
   const addBudget = async (budget: Omit<Budget, 'id' | 'created_at' | 'category'>) => {
     return {
@@ -96,7 +99,7 @@ export const useDemoFinancialData = (dateRange: DateRange | null) => {
     } as Budget
   }
 
-  const deleteBudget = async (id: string) => {
+  const deleteBudget = async (_id: string) => {
     return Promise.resolve()
   }
 
@@ -123,12 +126,12 @@ export const useDemoFinancialData = (dateRange: DateRange | null) => {
     }
   }
 
-  const getFinancialSummaryForDateRange = (range: DateRange | null): FinancialSummary => {
+  const getFinancialSummaryForDateRange = (_range: DateRange | null): FinancialSummary => {
     return getFinancialSummary()
   }
 
   // Get category breakdown
-  const getCategoryBreakdown = (type?: TransactionType, range?: DateRange | null): CategoryBreakdown[] => {
+  const getCategoryBreakdown = (type?: TransactionType, _range?: DateRange | null): CategoryBreakdown[] => {
     let filtered = filteredTransactions
     if (type) {
       filtered = filtered.filter(t => t.type === type)
@@ -158,7 +161,7 @@ export const useDemoFinancialData = (dateRange: DateRange | null) => {
   }
 
   // Get time series data
-  const getTimeSeriesData = (range?: DateRange | null): TimeSeriesData[] => {
+  const getTimeSeriesData = (_range?: DateRange | null): TimeSeriesData[] => {
     const grouped = filteredTransactions.reduce((acc, t) => {
       const date = new Date(t.occurred_at).toISOString().split('T')[0]
 
@@ -223,7 +226,9 @@ export const useDemoFinancialData = (dateRange: DateRange | null) => {
     updateTransaction,
     deleteTransaction,
     addAccount,
+    deleteAccount,
     addCategory,
+    deleteCategory,
     addBudget,
     updateBudget,
     deleteBudget,
@@ -234,4 +239,3 @@ export const useDemoFinancialData = (dateRange: DateRange | null) => {
     getBudgetProgress,
   }
 }
-

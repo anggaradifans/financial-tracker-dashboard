@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { useFinancialDataRest as useFinancialData, getDateRangeForPeriod } from '../../hooks/useFinancialDataRest'
+import { useFinancialData, getDateRangeForPeriod } from '../../hooks/useFinancialData'
 import { PeriodFilter as PeriodFilterType, DateRange, Budget } from '../../types/financial'
 
 import FinancialSummaryCards from '../FinancialSummaryCards'

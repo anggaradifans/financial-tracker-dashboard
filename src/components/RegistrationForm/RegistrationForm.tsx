@@ -106,7 +106,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onSwitchToLogin }) 
 
       setIsSuccess(true)
       setFormData({ email: '', password: '', confirmPassword: '', firstName: '', lastName: '' })
-    } catch (error) {
+    } catch {
       setErrors({ general: 'An unexpected error occurred. Please try again.' })
     } finally {
       setIsLoading(false)

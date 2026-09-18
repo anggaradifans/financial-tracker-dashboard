@@ -1,3 +1,6 @@
+-- HISTORICAL ONLY. This sample table is not part of the current product schema.
+-- Use supabase/migrations and do not replay this file.
+
 -- Create sample_data table for the dashboard
 CREATE TABLE sample_data (
   id SERIAL PRIMARY KEY,

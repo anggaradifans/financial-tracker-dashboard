@@ -1,3 +1,6 @@
+-- HISTORICAL ONLY. This file does not describe the current production schema.
+-- Use supabase/migrations and do not replay this file.
+
 -- Add user_id column to transactions table to connect with registered users
 ALTER TABLE transactions 
 ADD COLUMN user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;

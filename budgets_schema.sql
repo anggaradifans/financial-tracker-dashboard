@@ -1,3 +1,6 @@
+-- HISTORICAL ONLY. This file does not describe the current production schema.
+-- Use supabase/migrations and do not replay this file.
+
 -- Create budgets table
 CREATE TABLE IF NOT EXISTS budgets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -69,4 +72,3 @@ CREATE POLICY "Users can delete own budgets"
 
 -- Note: If using service_role key (which bypasses RLS), you can disable RLS:
 -- ALTER TABLE budgets DISABLE ROW LEVEL SECURITY;
-
