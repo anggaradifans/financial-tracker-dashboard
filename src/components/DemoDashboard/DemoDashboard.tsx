@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDemoFinancialData } from '../../hooks/useDemoFinancialData'
-import { getDateRangeForPeriod } from '../../hooks/useFinancialDataRest'
+import { getDateRangeForPeriod } from '../../hooks/useFinancialData'
 import { PeriodFilter as PeriodFilterType, DateRange, Budget } from '../../types/financial'
 
 import FinancialSummaryCards from '../FinancialSummaryCards'
@@ -17,7 +17,7 @@ import ToastNotifications from '../ToastNotifications'
 import DemoBanner from '../DemoBanner'
 import { CardSkeleton, ChartSkeleton } from '../SkeletonLoader'
 import EmptyState from '../EmptyState'
-import { Plus, LogOut, Download, TrendingUp, Moon, Sun } from 'lucide-react'
+import { Plus, Download, TrendingUp, Moon, Sun } from 'lucide-react'
 import { exportToCSV, formatExportFilename } from '../../utils/exportUtils'
 import { notifications } from '../../utils/notifications'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -47,7 +47,9 @@ const DemoDashboard: React.FC = () => {
     updateTransaction: updateTx,
     deleteTransaction: deleteTx,
     addAccount,
+    deleteAccount,
     addCategory,
+    deleteCategory,
     addBudget,
     updateBudget,
     deleteBudget,
@@ -123,10 +125,6 @@ const DemoDashboard: React.FC = () => {
       const message = error instanceof Error ? error.message : 'Failed to delete transaction'
       notifications.error(message)
     }
-  }
-
-  const handleSignOut = () => {
-    navigate('/')
   }
 
   const handleExport = () => {
@@ -313,9 +311,17 @@ const DemoDashboard: React.FC = () => {
                   await addAccount(name, currency)
                   notifications.info('Demo mode: Account would be saved in real mode')
                 }}
+                onDeleteAccount={async (id) => {
+                  await deleteAccount(id)
+                  notifications.info('Demo mode: Account would be deleted in real mode')
+                }}
                 onAddCategory={async (name, allowedType) => {
                   await addCategory(name, allowedType)
                   notifications.info('Demo mode: Category would be saved in real mode')
+                }}
+                onDeleteCategory={async (id) => {
+                  await deleteCategory(id)
+                  notifications.info('Demo mode: Category would be deleted in real mode')
                 }}
               />
             )}
@@ -365,4 +371,3 @@ const DemoDashboard: React.FC = () => {
 }
 
 export default DemoDashboard
-

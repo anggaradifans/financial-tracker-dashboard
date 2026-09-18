@@ -35,7 +35,7 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onSwitchToLogin
       } else {
         setSuccessMessage('Check your email for the password reset link.')
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred.')
     } finally {
       setIsLoading(false)

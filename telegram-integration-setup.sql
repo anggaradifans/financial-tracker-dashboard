@@ -1,3 +1,6 @@
+-- HISTORICAL ONLY. This file does not describe the current production schema.
+-- Use supabase/migrations and do not replay this file.
+
 -- Create a table to link Telegram users with your app users
 CREATE TABLE telegram_users (
   id SERIAL PRIMARY KEY,

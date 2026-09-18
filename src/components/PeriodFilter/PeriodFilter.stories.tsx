@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react'
 import PeriodFilter from './PeriodFilter'
-import { getDateRangeForPeriod } from '../../hooks/useFinancialDataRest'
+import { getDateRangeForPeriod } from '../../hooks/useFinancialData'
 
 const meta: Meta<typeof PeriodFilter> = {
   title: 'Components/PeriodFilter',
@@ -80,4 +80,3 @@ export const CustomRange: Story = {
     onCustomRangeChange: () => {},
   },
 }
-

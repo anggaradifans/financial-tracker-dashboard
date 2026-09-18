@@ -87,7 +87,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister, onSwitchToFor
       }
 
       // Success - auth state will be updated via AuthContext
-    } catch (error) {
+    } catch {
       setErrors({ general: 'An unexpected error occurred. Please try again.' })
     } finally {
       setIsLoading(false)
@@ -302,4 +302,3 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister, onSwitchToFor
 }
 
 export default LoginForm
-

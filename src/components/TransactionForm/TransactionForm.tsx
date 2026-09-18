@@ -146,6 +146,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
                 Type <span className="text-red-500 dark:text-red-400">*</span>
               </label>
               <select
+                aria-label="Type"
                 value={formData.type}
                 onChange={(e) =>
                   setFormData({ ...formData, type: e.target.value as TransactionType })
@@ -164,6 +165,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
                 Amount <span className="text-red-500 dark:text-red-400">*</span>
               </label>
               <input
+                aria-label="Amount"
                 type="number"
                 step="0.01"
                 min="0"
@@ -189,6 +191,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
                 Category <span className="text-red-500 dark:text-red-400">*</span>
               </label>
               <select
+                aria-label="Category"
                 value={formData.category_id}
                 onChange={(e) => {
                   setFormData({ ...formData, category_id: e.target.value })
@@ -218,6 +221,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
                 Account (Optional)
               </label>
               <select
+                aria-label="Account (Optional)"
                 value={formData.account_id}
                 onChange={(e) =>
                   setFormData({ ...formData, account_id: e.target.value })
@@ -239,6 +243,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
                 Date <span className="text-red-500 dark:text-red-400">*</span>
               </label>
               <input
+                aria-label="Date"
                 type="date"
                 value={formData.occurred_at}
                 onChange={(e) => {
@@ -262,6 +267,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
                 Currency
               </label>
               <select
+                aria-label="Currency"
                 value={formData.currency}
                 onChange={(e) =>
                   setFormData({ ...formData, currency: e.target.value })
@@ -281,6 +287,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
               Description (Optional)
             </label>
             <textarea
+              aria-label="Description (Optional)"
               value={formData.description}
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })

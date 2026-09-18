@@ -5,6 +5,8 @@ node_modules/
 
 # Testing
 /coverage
+/playwright-report
+/test-results
 
 # Production
 /dist
@@ -71,4 +73,3 @@ out
 # Temporary files
 *.tmp
 *.temp
-

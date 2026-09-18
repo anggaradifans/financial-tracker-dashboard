@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabaseRest } from '../lib/supabaseRest'
 import {
   Transaction,
   Account,
@@ -9,215 +9,407 @@ import {
   TimeSeriesData,
   DateRange,
   TransactionType,
+  Budget,
+  BudgetProgress,
 } from '../types/financial'
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns'
+import { devError } from '../utils/notifications'
 
 export const useFinancialData = (userId: string | undefined, dateRange: DateRange | null) => {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [categories, setCategories] = useState<Category[]>([])
+  const [budgets, setBudgets] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    console.log('[useFinancialData] useEffect triggered', { userId, dateRange })
-    if (userId) {
-      console.log('[useFinancialData] userId present, fetching data...')
-      fetchAllData()
-    } else {
-      console.warn('[useFinancialData] No userId provided, skipping data fetch')
+    if (!userId) {
+      setTransactions([])
+      setAccounts([])
+      setCategories([])
+      setBudgets([])
       setLoading(false)
+      return
     }
+    fetchAllData()
+    // fetchAllData is recreated with the current user and date-range scope.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, dateRange])
 
   const fetchAllData = async () => {
-    console.log('[useFinancialData] fetchAllData called')
     try {
       setLoading(true)
       setError(null)
-      console.log('[useFinancialData] Starting to fetch all data...')
 
       await Promise.all([
         fetchTransactions(),
         fetchAccounts(),
         fetchCategories(),
+        fetchBudgets(),
       ])
-      
-      console.log('[useFinancialData] All data fetched successfully')
     } catch (err) {
-      console.error('[useFinancialData] ERROR in fetchAllData:', err)
+      devError('[useFinancialData] Error fetching data:', err)
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch data'
-      console.error('[useFinancialData] Error message:', errorMessage)
       setError(errorMessage)
     } finally {
       setLoading(false)
-      console.log('[useFinancialData] Loading set to false')
     }
   }
 
   const fetchTransactions = async () => {
-    console.log('[useFinancialData] fetchTransactions called', { userId, dateRange })
     try {
-      let query = supabase
-        .from('transactions')
-        .select(`
-          *,
-          account:accounts(*),
-          category:categories(*)
-        `)
-        .eq('user_id', userId!)
-        .is('deleted_at', null)
+      // Build query parameters for Supabase REST API
+      const query: {
+        select?: string
+        eq?: Record<string, any>
+        gte?: Record<string, string>
+        lte?: Record<string, string>
+        is?: Record<string, any>
+        order?: string
+      } = {
+        select: '*,accounts(*),categories(*)',
+        is: { deleted_at: null },
+        order: 'occurred_at.desc',
+      }
 
+      // RLS enforces ownership; this filter also scopes the requested result.
+      if (userId) {
+        query.eq = { user_id: userId }
+      }
+
+      // Always apply date range filter if provided
       if (dateRange) {
-        console.log('[useFinancialData] Applying date range filter:', {
-          start: dateRange.start.toISOString(),
-          end: dateRange.end.toISOString(),
-        })
-        query = query
-          .gte('occurred_at', dateRange.start.toISOString())
-          .lte('occurred_at', dateRange.end.toISOString())
+        query.gte = { occurred_at: dateRange.start.toISOString() }
+        query.lte = { occurred_at: dateRange.end.toISOString() }
       }
 
-      console.log('[useFinancialData] Executing transactions query...')
-      const { data, error } = await query
-        .order('occurred_at', { ascending: false })
+      const data = await supabaseRest.select<Transaction>('transactions', query)
 
-      if (error) {
-        console.error('[useFinancialData] ERROR fetching transactions:', error)
-        throw error
-      }
-      
-      console.log('[useFinancialData] Transactions fetched successfully:', data?.length || 0, 'records')
-      setTransactions((data as Transaction[]) || [])
+      // Transform the response to match the expected structure
+      const transformedData = data.map((tx: any) => ({
+        ...tx,
+        account: tx.accounts || tx.account || null,
+        category: tx.categories || tx.category || null,
+      }))
+
+      setTransactions(transformedData || [])
     } catch (err) {
-      console.error('[useFinancialData] Exception in fetchTransactions:', err)
+      devError('[useFinancialData] Error fetching transactions:', err)
       throw err
     }
   }
 
   const fetchAccounts = async () => {
-    console.log('[useFinancialData] fetchAccounts called')
     try {
-      const { data, error } = await supabase
-        .from('accounts')
-        .select('*')
-        .order('name', { ascending: true })
-
-      if (error) {
-        console.error('[useFinancialData] ERROR fetching accounts:', error)
-        throw error
-      }
-      
-      console.log('[useFinancialData] Accounts fetched successfully:', data?.length || 0, 'records')
-      setAccounts((data as Account[]) || [])
+      const data = await supabaseRest.select<Account>('accounts', {
+        order: 'name.asc',
+      })
+      setAccounts(data || [])
     } catch (err) {
-      console.error('[useFinancialData] Exception in fetchAccounts:', err)
+      devError('[useFinancialData] Error fetching accounts:', err)
       throw err
     }
   }
 
   const fetchCategories = async () => {
-    console.log('[useFinancialData] fetchCategories called')
     try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name', { ascending: true })
+      const data = await supabaseRest.select<any>('categories', {
+        order: 'name.asc',
+      })
 
-      if (error) {
-        console.error('[useFinancialData] ERROR fetching categories:', error)
-        throw error
-      }
-      
-      console.log('[useFinancialData] Categories fetched successfully:', data?.length || 0, 'records')
-      setCategories((data as Category[]) || [])
+      const mappedData = (data || []) as Category[]
+      setCategories(mappedData)
     } catch (err) {
-      console.error('[useFinancialData] Exception in fetchCategories:', err)
+      devError('[useFinancialData] Error fetching categories:', err)
+      throw err
+    }
+  }
+
+  const fetchBudgets = async () => {
+    try {
+      const query: any = {
+        select: '*,categories(*)',
+        order: 'created_at.desc',
+      }
+
+      if (userId) {
+        query.eq = { user_id: userId }
+      }
+
+      const data = await supabaseRest.select<Budget>('budgets', query)
+      const transformedData = data.map((budget: any) => ({
+        ...budget,
+        category: budget.categories || budget.category || null,
+      }))
+      setBudgets(transformedData || [])
+    } catch (err) {
+      devError('[useFinancialData] Error fetching budgets:', err)
       throw err
     }
   }
 
   const addTransaction = async (transaction: Omit<Transaction, 'id' | 'created_at' | 'account' | 'category'>) => {
-    const { data, error } = await supabase
-      .from('transactions')
-      .insert({
+    try {
+      if (!userId) throw new Error('Please sign in to add a transaction.')
+      const dbTransaction = {
         ...transaction,
+        type: transaction.type,
         user_id: userId,
-      })
-      .select(`
-        *,
-        account:accounts(*),
-        category:categories(*)
-      `)
-      .single()
+      }
 
-    if (error) throw error
-    if (data) {
-      setTransactions(prev => [data as Transaction, ...prev])
+      const result = await supabaseRest.insert<Transaction[]>('transactions', dbTransaction)
+
+      const rawData = Array.isArray(result) ? result[0] : result
+      const data = rawData ? {
+        ...rawData,
+        type: rawData.type,
+        account: accounts.find(a => a.id === rawData.account_id) || null,
+        category: categories.find(c => c.id === rawData.category_id) || null,
+      } as Transaction : null
+
+      if (data) {
+        setTransactions(prev => [data, ...prev])
+      }
+      return data
+    } catch (err) {
+      devError('[useFinancialData] Error adding transaction:', err)
+      throw err
     }
-    return data as Transaction
   }
 
   const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
-    const { data, error } = await supabase
-      .from('transactions')
-      .update(updates)
-      .eq('id', id)
-      .select(`
-        *,
-        account:accounts(*),
-        category:categories(*)
-      `)
-      .single()
+    try {
+      const dbUpdates = {
+        ...updates,
+        type: updates.type,
+      }
 
-    if (error) throw error
-    if (data) {
-      setTransactions(prev =>
-        prev.map(t => t.id === id ? (data as Transaction) : t)
-      )
+      const result = await supabaseRest.update<any[]>('transactions', dbUpdates, { id })
+      const rawData = Array.isArray(result) ? result[0] : result
+      const data = rawData ? {
+        ...rawData,
+        type: rawData.type,
+        account: accounts.find(a => a.id === rawData.account_id) || null,
+        category: categories.find(c => c.id === rawData.category_id) || null,
+      } as Transaction : null
+
+      if (data) {
+        setTransactions(prev =>
+          prev.map(t => t.id === id ? data : t)
+        )
+      }
+      return data
+    } catch (err) {
+      devError('[useFinancialData] Error updating transaction:', err)
+      throw err
     }
-    return data as Transaction
   }
 
   const deleteTransaction = async (id: string) => {
-    const { error } = await supabase
-      .from('transactions')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', id)
-
-    if (error) throw error
-    setTransactions(prev => prev.filter(t => t.id !== id))
+    try {
+      await supabaseRest.update('transactions', { deleted_at: new Date().toISOString() }, { id })
+      setTransactions(prev => prev.filter(t => t.id !== id))
+    } catch (err) {
+      devError('[useFinancialData] Error deleting transaction:', err)
+      throw err
+    }
   }
 
   const addAccount = async (name: string, currency: string = 'IDR') => {
-    const { data, error } = await supabase
-      .from('accounts')
-      .insert({ name, currency })
-      .select()
-      .single()
+    try {
+      const result = await supabaseRest.insert<Account[]>('accounts', { name, currency })
+      const data = Array.isArray(result) ? result[0] : result
 
-    if (error) throw error
-    if (data) {
-      setAccounts(prev => [...prev, data as Account])
+      if (data) {
+        setAccounts(prev => [...prev, data])
+      }
+      return data
+    } catch (err) {
+      devError('[useFinancialData] Error adding account:', err)
+      throw err
     }
-    return data as Account
   }
 
-  const addCategory = async (name: string, allowed_type: 'income' | 'expense' | 'both' = 'both') => {
-    const { data, error } = await supabase
-      .from('categories')
-      .insert({ name, allowed_type })
-      .select()
-      .single()
+  const addCategory = async (name: string, allowed_type: 'income' | 'outcome' | 'both' = 'both') => {
+    try {
+      if (!userId) throw new Error('Please sign in to add a category.')
+      const result = await supabaseRest.insert<Category[]>('categories', { name, allowed_type, user_id: userId })
+      const data = Array.isArray(result) ? result[0] : result
 
-    if (error) throw error
-    if (data) {
-      setCategories(prev => [...prev, data as Category])
+      if (data) {
+        setCategories(prev => [...prev, data])
+      }
+      return data
+    } catch (err) {
+      devError('[useFinancialData] Error adding category:', err)
+      throw err
     }
-    return data as Category
   }
 
-  // Calculate financial summary
+  const deleteAccount = async (id: string) => {
+    try {
+      await supabaseRest.delete('accounts', { id })
+      setAccounts(prev => prev.filter(a => a.id !== id))
+    } catch (err) {
+      devError('[useFinancialData] Error deleting account:', err)
+      throw err
+    }
+  }
+
+  const deleteCategory = async (id: string) => {
+    try {
+      const category = categories.find(item => item.id === id)
+      if (!userId || category?.user_id !== userId) {
+        throw new Error('Only your custom categories can be deleted. Shared defaults are read-only.')
+      }
+      await supabaseRest.delete('categories', { id })
+      setCategories(prev => prev.filter(c => c.id !== id))
+    } catch (err) {
+      devError('[useFinancialData] Error deleting category:', err)
+      throw err
+    }
+  }
+
+  const addBudget = async (budget: Omit<Budget, 'id' | 'created_at' | 'category'>) => {
+    try {
+      if (!userId) throw new Error('Please sign in to add a budget.')
+      const result = await supabaseRest.insert<Budget[]>('budgets', {
+        ...budget,
+        user_id: userId,
+      })
+      const data = Array.isArray(result) ? result[0] : result
+      if (data) {
+        setBudgets(prev => [...prev, data])
+      }
+      return data
+    } catch (err) {
+      devError('[useFinancialData] Error adding budget:', err)
+      throw err
+    }
+  }
+
+  const updateBudget = async (id: string, updates: Partial<Budget>) => {
+    try {
+      const result = await supabaseRest.update<Budget[]>('budgets', updates, { id })
+      const data = Array.isArray(result) ? result[0] : result
+      if (data) {
+        setBudgets(prev => prev.map(b => b.id === id ? data : b))
+      }
+      return data
+    } catch (err) {
+      devError('[useFinancialData] Error updating budget:', err)
+      throw err
+    }
+  }
+
+  const deleteBudget = async (id: string) => {
+    try {
+      await supabaseRest.delete('budgets', { id })
+      setBudgets(prev => prev.filter(b => b.id !== id))
+    } catch (err) {
+      devError('[useFinancialData] Error deleting budget:', err)
+      throw err
+    }
+  }
+
+  // Calculate budget period end date based on period type and start date
+  const getBudgetPeriodEndDate = (startDate: Date, period: 'daily' | 'weekly' | 'monthly' | 'yearly'): Date => {
+    const endDate = new Date(startDate)
+
+    switch (period) {
+      case 'daily':
+        endDate.setDate(endDate.getDate() + 1)
+        break
+      case 'weekly':
+        endDate.setDate(endDate.getDate() + 7)
+        break
+      case 'monthly':
+        endDate.setMonth(endDate.getMonth() + 1)
+        break
+      case 'yearly':
+        endDate.setFullYear(endDate.getFullYear() + 1)
+        break
+    }
+
+    // Subtract 1 day to get the last day of the period (inclusive)
+    endDate.setDate(endDate.getDate() - 1)
+    // Set to end of day
+    endDate.setHours(23, 59, 59, 999)
+    return endDate
+  }
+
+  // Get current budget period for a budget (calculates which period we're currently in)
+  const getCurrentBudgetPeriod = (budget: Budget): DateRange => {
+    const startDate = new Date(budget.start_date)
+    const now = new Date()
+
+    // Calculate which period we're currently in
+    let periodStart = new Date(startDate)
+    periodStart.setHours(0, 0, 0, 0)
+    let periodEnd = getBudgetPeriodEndDate(periodStart, budget.period)
+
+    // If we're past the current period, calculate the next period
+    while (now > periodEnd) {
+      periodStart = new Date(periodEnd)
+      periodStart.setDate(periodStart.getDate() + 1)
+      periodStart.setHours(0, 0, 0, 0)
+      periodEnd = getBudgetPeriodEndDate(periodStart, budget.period)
+    }
+
+    return {
+      start: periodStart,
+      end: periodEnd,
+    }
+  }
+
+  // Get budget progress for a given date range
+  const getBudgetProgress = (range?: DateRange | null): BudgetProgress[] => {
+    if (!range) return []
+
+    return budgets.map(budget => {
+      // Get the current budget period for this budget
+      const budgetPeriod = getCurrentBudgetPeriod(budget)
+
+      // Use the intersection of dashboard date range and budget period
+      const effectiveStart = new Date(Math.max(range.start.getTime(), budgetPeriod.start.getTime()))
+      const effectiveEnd = new Date(Math.min(range.end.getTime(), budgetPeriod.end.getTime()))
+
+      // Filter transactions within the effective budget period
+      const filteredTransactions = transactions.filter(t => {
+        const txDate = new Date(t.occurred_at)
+        return (
+          txDate >= effectiveStart &&
+          txDate <= effectiveEnd &&
+          t.category_id === budget.category_id
+        )
+      })
+
+      // Calculate outcome - income for this category
+      const outcome = filteredTransactions
+        .filter(t => t.type === 'outcome')
+        .reduce((sum, t) => sum + Number(t.amount), 0)
+
+      const income = filteredTransactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + Number(t.amount), 0)
+
+      const spent = outcome - income
+      const remaining = budget.amount - spent
+      const percentage = budget.amount > 0 ? (spent / budget.amount) * 100 : 0
+      const isOverBudget = spent > budget.amount
+
+      return {
+        budget,
+        spent,
+        remaining,
+        percentage: Math.min(percentage, 100),
+        isOverBudget,
+      }
+    })
+  }
+
+  // Calculate financial summary (all data)
   const getFinancialSummary = (): FinancialSummary => {
     const income = transactions
       .filter(t => t.type === 'income')
@@ -229,7 +421,6 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
 
     const netBalance = income - outcome
 
-    // Calculate account balance (sum of all income minus expenses)
     const accountBalance = transactions.reduce((sum, t) => {
       return sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount))
     }, 0)
@@ -242,9 +433,86 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
     }
   }
 
-  // Get category breakdown
-  const getCategoryBreakdown = (type?: TransactionType): CategoryBreakdown[] => {
+  // Calculate financial summary for current month only
+  const getFinancialSummaryThisMonth = (): FinancialSummary => {
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+
+    const thisMonthTransactions = transactions.filter(t => {
+      const txDate = new Date(t.occurred_at)
+      return txDate >= startOfMonth && txDate <= endOfMonth
+    })
+
+    const income = thisMonthTransactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + Number(t.amount), 0)
+
+    const outcome = thisMonthTransactions
+      .filter(t => t.type === 'outcome')
+      .reduce((sum, t) => sum + Number(t.amount), 0)
+
+    const netBalance = income - outcome
+
+    const accountBalance = thisMonthTransactions.reduce((sum, t) => {
+      return sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount))
+    }, 0)
+
+    return {
+      totalIncome: income,
+      totalOutcome: outcome,
+      netBalance,
+      accountBalance,
+    }
+  }
+
+  // Calculate financial summary for a specific date range
+  const getFinancialSummaryForDateRange = (range: DateRange | null): FinancialSummary => {
+    if (!range) {
+      // If no date range, use all transactions
+      return getFinancialSummary()
+    }
+
+    const filteredTransactions = transactions.filter(t => {
+      const txDate = new Date(t.occurred_at)
+      return txDate >= range.start && txDate <= range.end
+    })
+
+    const income = filteredTransactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + Number(t.amount), 0)
+
+    const outcome = filteredTransactions
+      .filter(t => t.type === 'outcome')
+      .reduce((sum, t) => sum + Number(t.amount), 0)
+
+    const netBalance = income - outcome
+
+    const accountBalance = filteredTransactions.reduce((sum, t) => {
+      return sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount))
+    }, 0)
+
+    return {
+      totalIncome: income,
+      totalOutcome: outcome,
+      netBalance,
+      accountBalance,
+    }
+  }
+
+  // Get category breakdown (optionally filtered by date range and type)
+  const getCategoryBreakdown = (type?: TransactionType, range?: DateRange | null): CategoryBreakdown[] => {
     let filtered = transactions
+
+    // Filter by date range if provided
+    if (range) {
+      filtered = filtered.filter(t => {
+        const txDate = new Date(t.occurred_at)
+        return txDate >= range.start && txDate <= range.end
+      })
+    }
+
+    // Filter by type if provided
     if (type) {
       filtered = filtered.filter(t => t.type === type)
     }
@@ -272,11 +540,21 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
     return Object.values(breakdown).sort((a, b) => b.amount - a.amount)
   }
 
-  // Get time series data
-  const getTimeSeriesData = (): TimeSeriesData[] => {
-    const grouped = transactions.reduce((acc, t) => {
+  // Get time series data (optionally filtered by date range)
+  const getTimeSeriesData = (range?: DateRange | null): TimeSeriesData[] => {
+    let filteredTransactions = transactions
+
+    // Filter by date range if provided
+    if (range) {
+      filteredTransactions = transactions.filter(t => {
+        const txDate = new Date(t.occurred_at)
+        return txDate >= range.start && txDate <= range.end
+      })
+    }
+
+    const grouped = filteredTransactions.reduce((acc, t) => {
       const date = new Date(t.occurred_at).toISOString().split('T')[0]
-      
+
       if (!acc[date]) {
         acc[date] = { date, income: 0, outcome: 0, net: 0 }
       }
@@ -298,6 +576,7 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
     transactions,
     accounts,
     categories,
+    budgets,
     loading,
     error,
     refresh: fetchAllData,
@@ -305,17 +584,25 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
     updateTransaction,
     deleteTransaction,
     addAccount,
+    deleteAccount,
     addCategory,
+    deleteCategory,
+    addBudget,
+    updateBudget,
+    deleteBudget,
     getFinancialSummary,
+    getFinancialSummaryThisMonth,
+    getFinancialSummaryForDateRange,
     getCategoryBreakdown,
     getTimeSeriesData,
+    getBudgetProgress,
   }
 }
 
 // Helper function to get date range based on period
 export const getDateRangeForPeriod = (period: 'today' | 'week' | 'month' | 'year'): DateRange => {
   const now = new Date()
-  
+
   switch (period) {
     case 'today':
       return {

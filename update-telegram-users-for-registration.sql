@@ -1,3 +1,6 @@
+-- HISTORICAL ONLY. This registration model was retired and differs from production.
+-- Use supabase/migrations and do not replay this file.
+
 -- Update telegram_users table to allow NULL telegram_user_id for initial registration
 -- This allows users to be added during registration, and telegram_user_id can be linked later
 
@@ -58,4 +61,3 @@ BEGIN
     ALTER TABLE telegram_users ADD CONSTRAINT telegram_users_user_id_unique UNIQUE (user_id);
   END IF;
 END $$;
-

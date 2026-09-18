@@ -30,20 +30,21 @@ class NotificationManager {
 
   show(message: string, type: NotificationType = 'info', duration?: number) {
     const id = `${Date.now()}-${Math.random()}`
+    const resolvedDuration = duration ?? this.defaultDuration
     const notification: Notification = {
       id,
       type,
       message,
-      duration: duration || this.defaultDuration,
+      duration: resolvedDuration,
     }
 
     this.notifications.push(notification)
     this.notify()
 
-    if (notification.duration > 0) {
+    if (resolvedDuration > 0) {
       setTimeout(() => {
         this.remove(id)
-      }, notification.duration)
+      }, resolvedDuration)
     }
 
     return id
@@ -90,4 +91,3 @@ export const devError = (...args: any[]) => {
     console.error(...args)
   }
 }
-
