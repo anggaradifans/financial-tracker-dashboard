@@ -8,16 +8,14 @@ import FinancialSummaryCards from '../FinancialSummaryCards'
 import FinancialCharts from '../FinancialCharts'
 import TransactionTable from '../TransactionTable'
 import TransactionForm from '../TransactionForm'
-import CategoryAccountManager from '../CategoryAccountManager'
 import InsightsSection from '../InsightsSection'
 import PeriodFilter from '../PeriodFilter'
 import BudgetManager from '../BudgetManager'
 import BudgetProgressCards from '../BudgetProgressCards'
 import ToastNotifications from '../ToastNotifications'
 import DemoBanner from '../DemoBanner'
-import { CardSkeleton, ChartSkeleton } from '../SkeletonLoader'
-import EmptyState from '../EmptyState'
-import { Plus, Download, TrendingUp, Moon, Sun } from 'lucide-react'
+import { CardSkeleton } from '../SkeletonLoader'
+import { Plus, Download, Moon, Sun, Wallet } from 'lucide-react'
 import { exportToCSV, formatExportFilename } from '../../utils/exportUtils'
 import { notifications } from '../../utils/notifications'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -31,7 +29,6 @@ const DemoDashboard: React.FC = () => {
   )
   const [showTransactionForm, setShowTransactionForm] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<any>(null)
-  const [showManagePanel] = useState(false)
   const [showBudgetPanel, setShowBudgetPanel] = useState(false)
   const [showAmounts, setShowAmounts] = useState(false)
 
@@ -46,10 +43,6 @@ const DemoDashboard: React.FC = () => {
     addTransaction: addTx,
     updateTransaction: updateTx,
     deleteTransaction: deleteTx,
-    addAccount,
-    deleteAccount,
-    addCategory,
-    deleteCategory,
     addBudget,
     updateBudget,
     deleteBudget,
@@ -165,64 +158,60 @@ const DemoDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div className="dashboard-page min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <DemoBanner />
       <ToastNotifications />
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b dark:border-gray-700 sticky top-0 z-40 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 py-3 sm:py-4">
+      <a href="#demo-dashboard-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:bg-white focus:px-4 focus:py-3 focus:text-gray-900">Skip to dashboard</a>
+      <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
+        <div className="max-w-7xl mx-auto px-4 lg:px-8">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 py-4">
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white transition-colors truncate">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white transition-colors">
                 Financial Tracker <span className="text-yellow-600 dark:text-yellow-400 text-sm">(Demo)</span>
               </h1>
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 transition-colors truncate">
-                Welcome! You're viewing demo data.
+              <p className="text-sm text-gray-600 dark:text-gray-400 transition-colors">
+                Explore sample data without changing your account.
               </p>
             </div>
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={toggleTheme}
-                className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
-                title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+                className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
               >
-                {theme === 'light' ? <Moon className="h-4 w-4 sm:h-5 sm:w-5" /> : <Sun className="h-4 w-4 sm:h-5 sm:w-5" />}
+                {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
               </button>
               <button
-                onClick={handleExport}
-                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-green-600 dark:bg-green-700 text-white rounded-md hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-sm sm:text-base flex-shrink-0"
-                title="Export transactions to CSV"
+                onClick={() => setShowBudgetPanel(!showBudgetPanel)}
+                disabled={loading}
+                aria-expanded={showBudgetPanel}
+                aria-controls="demo-budget-management"
+                className="flex items-center gap-2 px-3 py-2 rounded-md text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
               >
-                <Download className="h-4 w-4" />
-                <span className="hidden sm:inline">Export CSV</span>
-                <span className="sm:hidden">Export</span>
-              </button>
-              <button
-                onClick={() => {
-                  setEditingTransaction(null)
-                  setShowTransactionForm(true)
-                }}
-                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-primary-600 dark:bg-primary-500 text-white rounded-md hover:bg-primary-700 dark:hover:bg-primary-600 transition-colors text-sm sm:text-base flex-shrink-0"
-              >
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Add Transaction</span>
-                <span className="sm:hidden">Add</span>
+                <Wallet className="h-4 w-4" aria-hidden="true" /> Budgets
               </button>
               <button
                 onClick={() => navigate('/')}
-                className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-2 bg-primary-600 dark:bg-primary-500 text-white rounded-md hover:bg-primary-700 dark:hover:bg-primary-600 transition-colors text-sm sm:text-base flex-shrink-0"
+                className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-sm"
               >
-                <span className="hidden sm:inline">Sign In</span>
-                <span className="sm:hidden">Login</span>
+                Sign In
               </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-4 sm:space-y-6 lg:space-y-8 animate-fadeIn">
-        {/* Period Filter */}
+      <main id="demo-dashboard-content" tabIndex={-1} className="max-w-7xl mx-auto px-4 lg:px-8 py-6 lg:py-8 space-y-6 lg:space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-gray-900 dark:text-white">Explore the demo</h2>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Review the sample financial activity, then sign in to track your own.</p>
+          </div>
+          <button onClick={() => { setEditingTransaction(null); setShowTransactionForm(true) }} className="inline-flex items-center justify-center gap-2 px-4 py-3 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-semibold shrink-0">
+            <Plus className="h-4 w-4" aria-hidden="true" /> Add Transaction
+          </button>
+        </div>
+
         <PeriodFilter
           period={period}
           dateRange={dateRange}
@@ -230,10 +219,21 @@ const DemoDashboard: React.FC = () => {
           onCustomRangeChange={handleCustomRangeChange}
         />
 
-        {/* Financial Summary Cards */}
+        {showBudgetPanel && !loading && (
+          <section id="demo-budget-management" aria-label="Budget management">
+            <BudgetManager
+              budgets={budgets}
+              categories={categories}
+              onAddBudget={async (budget: Omit<Budget, 'id' | 'created_at' | 'category'>) => { await addBudget(budget); notifications.info('Demo mode: Budget would be saved in real mode') }}
+              onUpdateBudget={async (id: string, updates: Partial<Budget>) => { await updateBudget(id, updates); notifications.info('Demo mode: Budget would be updated in real mode') }}
+              onDeleteBudget={async (id: string) => { await deleteBudget(id); notifications.info('Demo mode: Budget would be deleted in real mode') }}
+              currency="IDR"
+            />
+          </section>
+        )}
+
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <CardSkeleton />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4" role="status" aria-label="Loading demo financial data">
             <CardSkeleton />
             <CardSkeleton />
             <CardSkeleton />
@@ -247,7 +247,29 @@ const DemoDashboard: React.FC = () => {
               onToggleAmounts={() => setShowAmounts(!showAmounts)}
             />
 
-            {/* Budget Progress Cards */}
+            <section aria-labelledby="demo-transactions-heading" className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 id="demo-transactions-heading" className="text-xl font-semibold text-gray-900 dark:text-white">Transactions</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Sample activity in your selected period</p>
+                </div>
+                <button onClick={handleExport} disabled={transactions.length === 0} aria-label="Export demo transactions to CSV" className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed">
+                  <Download className="h-4 w-4" aria-hidden="true" /> Export CSV
+                </button>
+              </div>
+              <TransactionTable
+                transactions={transactions}
+                accounts={accounts}
+                categories={categories}
+                onEdit={handleEditTransaction}
+                onDelete={handleDeleteTransaction}
+                loading={loading}
+                currency="IDR"
+                onAddTransaction={() => { setEditingTransaction(null); setShowTransactionForm(true) }}
+                emptyDescription="No sample transactions in this period. Choose another period to see demo activity."
+              />
+            </section>
+
             {(budgetProgress.length > 0 || budgets.length > 0) && (
               <BudgetProgressCards 
                 budgetProgress={budgetProgress} 
@@ -257,73 +279,15 @@ const DemoDashboard: React.FC = () => {
               />
             )}
 
-            {/* Budget Management */}
-            {showBudgetPanel && (
-              <BudgetManager
-                budgets={budgets}
-                categories={categories}
-                onAddBudget={async (budget: Omit<Budget, 'id' | 'created_at' | 'category'>) => {
-                  await addBudget(budget)
-                  notifications.info('Demo mode: Budget would be saved in real mode')
-                }}
-                onUpdateBudget={async (id: string, updates: Partial<Budget>) => {
-                  await updateBudget(id, updates)
-                  notifications.info('Demo mode: Budget would be updated in real mode')
-                }}
-                onDeleteBudget={async (id: string) => {
-                  await deleteBudget(id)
-                  notifications.info('Demo mode: Budget would be deleted in real mode')
-                }}
-                currency="IDR"
-              />
-            )}
-
-            {/* Charts Section */}
-            {loading ? (
-              <ChartSkeleton />
-            ) : timeSeriesData.length > 0 || categoryBreakdown.length > 0 ? (
+            {(timeSeriesData.length > 0 || categoryBreakdown.length > 0) && (
+              <section aria-labelledby="demo-trends-heading" className="space-y-4">
+                <h2 id="demo-trends-heading" className="text-xl font-semibold text-gray-900 dark:text-white">Trends & breakdowns</h2>
               <FinancialCharts
                 timeSeriesData={timeSeriesData}
                 categoryBreakdown={categoryBreakdown}
                 currency="IDR"
               />
-            ) : transactions.length === 0 ? (
-              <EmptyState
-                icon={TrendingUp}
-                title="No financial data yet"
-                description="Start by adding your first transaction to see charts and insights"
-                action={{
-                  label: 'Add Transaction',
-                  onClick: () => {
-                    setEditingTransaction(null)
-                    setShowTransactionForm(true)
-                  },
-                }}
-              />
-            ) : null}
-
-            {/* Category & Account Management */}
-            {showManagePanel && (
-              <CategoryAccountManager
-                accounts={accounts}
-                categories={categories}
-                onAddAccount={async (name, currency) => {
-                  await addAccount(name, currency)
-                  notifications.info('Demo mode: Account would be saved in real mode')
-                }}
-                onDeleteAccount={async (id) => {
-                  await deleteAccount(id)
-                  notifications.info('Demo mode: Account would be deleted in real mode')
-                }}
-                onAddCategory={async (name, allowedType) => {
-                  await addCategory(name, allowedType)
-                  notifications.info('Demo mode: Category would be saved in real mode')
-                }}
-                onDeleteCategory={async (id) => {
-                  await deleteCategory(id)
-                  notifications.info('Demo mode: Category would be deleted in real mode')
-                }}
-              />
+              </section>
             )}
 
             {/* Insights Section */}
@@ -336,18 +300,6 @@ const DemoDashboard: React.FC = () => {
               />
             )}
 
-            {/* Transactions Table */}
-            <TransactionTable
-              transactions={transactions}
-              onEdit={handleEditTransaction}
-              onDelete={handleDeleteTransaction}
-              loading={loading}
-              currency="IDR"
-              onAddTransaction={() => {
-                setEditingTransaction(null)
-                setShowTransactionForm(true)
-              }}
-            />
           </>
         )}
       </main>

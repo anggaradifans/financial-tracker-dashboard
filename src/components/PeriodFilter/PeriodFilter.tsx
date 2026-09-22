@@ -1,7 +1,7 @@
-import React from 'react'
+import React, { useId, useRef, useState } from 'react'
 import { PeriodFilter as PeriodFilterType, DateRange } from '../../types/financial'
 import { Calendar } from 'lucide-react'
-import { format } from 'date-fns'
+import { endOfDay, format, isValid, parseISO, startOfDay } from 'date-fns'
 
 interface PeriodFilterProps {
   period: PeriodFilterType
@@ -10,31 +10,33 @@ interface PeriodFilterProps {
   onCustomRangeChange: (start: Date, end: Date) => void
 }
 
-const PeriodFilter: React.FC<PeriodFilterProps> = ({
-  period,
-  dateRange,
-  onPeriodChange,
-  onCustomRangeChange,
-}) => {
-  const [showCustomPicker, setShowCustomPicker] = React.useState(false)
-  const [customStart, setCustomStart] = React.useState(
-    dateRange?.start ? format(dateRange.start, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')
-  )
-  const [customEnd, setCustomEnd] = React.useState(
-    dateRange?.end ? format(dateRange.end, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd')
-  )
+const PeriodFilter: React.FC<PeriodFilterProps> = ({ period, dateRange, onPeriodChange, onCustomRangeChange }) => {
+  const id = useId()
+  const customButton = useRef<HTMLButtonElement>(null)
+  const [showCustomPicker, setShowCustomPicker] = useState(false)
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
+  const [error, setError] = useState('')
 
-  const handleCustomRangeSubmit = () => {
-    const start = new Date(customStart)
-    const end = new Date(customEnd)
-    
-    if (start > end) {
-      alert('Start date must be before end date')
+  const closePicker = () => {
+    setShowCustomPicker(false)
+    customButton.current?.focus()
+  }
+
+  const applyRange = (event: React.FormEvent) => {
+    event.preventDefault()
+    const start = startOfDay(parseISO(customStart))
+    const end = endOfDay(parseISO(customEnd))
+    if (!isValid(start) || !isValid(end)) {
+      setError('Choose a start date and an end date.')
       return
     }
-    
+    if (start > end) {
+      setError('End date must be on or after the start date.')
+      return
+    }
     onCustomRangeChange(start, end)
-    setShowCustomPicker(false)
+    closePicker()
   }
 
   const periods: Array<{ value: PeriodFilterType; label: string }> = [
@@ -46,83 +48,55 @@ const PeriodFilter: React.FC<PeriodFilterProps> = ({
   ]
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-3 sm:p-4 border border-gray-200 dark:border-gray-700 transition-colors duration-300 animate-fadeIn">
-      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3">
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 dark:text-gray-400" />
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors">Period:</span>
+    <section aria-label="Reporting period" className="period-filter border-y border-gray-200 dark:border-gray-700 py-4">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+        <div className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+          <Calendar className="h-4 w-4" aria-hidden="true" /> Period
         </div>
-        <div className="flex flex-wrap gap-2">
-          {periods.map((p) => (
-            <button
-              key={p.value}
+        <div className="flex flex-wrap gap-1" role="group" aria-label="Choose reporting period">
+          {periods.map(p => (
+            <button key={p.value} ref={p.value === 'custom' ? customButton : undefined}
+              aria-pressed={period === p.value}
+              aria-expanded={p.value === 'custom' ? showCustomPicker : undefined}
+              aria-controls={p.value === 'custom' ? `${id}-picker` : undefined}
               onClick={() => {
+                setError('')
                 if (p.value === 'custom') {
-                  setShowCustomPicker(true)
+                  setCustomStart(format(dateRange?.start ?? new Date(), 'yyyy-MM-dd'))
+                  setCustomEnd(format(dateRange?.end ?? new Date(), 'yyyy-MM-dd'))
+                  setShowCustomPicker(!showCustomPicker)
                 } else {
+                  setShowCustomPicker(false)
                   onPeriodChange(p.value)
                 }
               }}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-md text-xs sm:text-sm font-medium transition-colors ${
-                period === p.value
-                  ? 'bg-primary-600 dark:bg-primary-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
-            >
-              {p.label}
-            </button>
+              className={`min-h-11 px-3 rounded-md text-sm font-medium ${period === p.value ? 'bg-primary-600 text-white' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+            >{p.label}</button>
           ))}
         </div>
-        {dateRange && period !== 'custom' && (
-          <span className="text-xs text-gray-500 dark:text-gray-400 sm:ml-auto transition-colors text-center sm:text-right">
-            {format(dateRange.start, 'MMM dd')} - {format(dateRange.end, 'MMM dd, yyyy')}
-          </span>
-        )}
+        {dateRange && <p className="text-sm text-gray-600 dark:text-gray-400 md:ml-auto" aria-live="polite">{format(dateRange.start, 'MMM d, yyyy')} – {format(dateRange.end, 'MMM d, yyyy')}</p>}
       </div>
-
       {showCustomPicker && (
-        <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-md border border-gray-200 dark:border-gray-700 transition-colors animate-slideDown">
-          <div className="flex gap-4 items-end">
-            <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors">
-                Start Date
-              </label>
-              <input
-                type="date"
-                value={customStart}
-                onChange={(e) => setCustomStart(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors">
-                End Date
-              </label>
-              <input
-                type="date"
-                value={customEnd}
-                onChange={(e) => setCustomEnd(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleCustomRangeSubmit}
-                className="px-4 py-2 bg-primary-600 dark:bg-primary-500 text-white text-sm rounded-md hover:bg-primary-700 dark:hover:bg-primary-600 transition-colors"
-              >
-                Apply
-              </button>
-              <button
-                onClick={() => setShowCustomPicker(false)}
-                className="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm rounded-md hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
-              >
-                Cancel
-              </button>
+        <form id={`${id}-picker`} onSubmit={applyRange} noValidate onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); closePicker() } }} className="mt-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+            {[
+              { name: 'start', label: 'Start Date', value: customStart, set: setCustomStart },
+              { name: 'end', label: 'End Date', value: customEnd, set: setCustomEnd },
+            ].map(field => (
+              <div key={field.name} className="min-w-0">
+                <label htmlFor={`${id}-${field.name}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{field.label}</label>
+                <input id={`${id}-${field.name}`} type="date" required autoFocus={field.name === 'start'} value={field.value} onChange={event => { field.set(event.target.value); setError('') }} aria-invalid={!!error} aria-describedby={error ? `${id}-error` : undefined} className="min-h-11 w-full min-w-0 rounded-md border border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-white [color-scheme:light] dark:[color-scheme:dark]" />
+              </div>
+            ))}
+            <div className="flex gap-2 sm:col-span-2 lg:col-span-1">
+              <button type="submit" className="min-h-11 rounded-md bg-primary-600 hover:bg-primary-700 text-white px-4 text-sm font-medium">Apply</button>
+              <button type="button" onClick={closePicker} className="min-h-11 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 text-sm hover:bg-gray-100 dark:hover:bg-gray-700">Cancel</button>
             </div>
           </div>
-        </div>
+          {error && <p id={`${id}-error`} role="alert" className="mt-3 text-sm text-red-700 dark:text-red-400">{error}</p>}
+        </form>
       )}
-    </div>
+    </section>
   )
 }
 

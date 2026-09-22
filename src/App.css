@@ -9,6 +9,43 @@
 }
 
 @layer components {
+  :where(.dashboard-page, .period-filter, .financial-summary, .transaction-table) :is(button, a, input, select, summary):focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 3px;
+  }
+
+  .dark :where(.dashboard-page, .period-filter, .financial-summary, .transaction-table) :is(button, a, input, select, summary):focus-visible {
+    outline-color: #93c5fd;
+  }
+
+  :where(.dashboard-page, .transaction-table) :is(button, input, select) {
+    min-height: 44px;
+  }
+
+  :where(.dashboard-page, .transaction-table) button {
+    min-width: 44px;
+  }
+
+  .transaction-table table {
+    width: 100%;
+    min-width: 860px;
+  }
+
+  .transaction-table input::placeholder {
+    @apply text-gray-500 dark:text-gray-400;
+  }
+
+  .transaction-table :is(input, select) {
+    @apply border-gray-500 dark:border-gray-400;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dashboard-page *, .period-filter *, .financial-summary *, .transaction-table * {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+
   .form-input {
     @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500;
   }

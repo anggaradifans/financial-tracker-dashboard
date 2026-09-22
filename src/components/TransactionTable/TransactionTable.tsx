@@ -16,6 +16,7 @@ interface TransactionTableProps {
   onAddTransaction?: () => void
   accounts?: Account[]
   categories?: Category[]
+  emptyDescription?: string
 }
 
 const TransactionTable: React.FC<TransactionTableProps> = ({
@@ -27,6 +28,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   onAddTransaction,
   accounts = [],
   categories = [],
+  emptyDescription = 'Start tracking your finances by adding your first transaction',
 }) => {
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; description: string } | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -52,6 +54,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
     return transactions
       .filter(t => {
         const matchesSearch =
+          !searchTerm.trim() ||
           t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           t.category?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           t.account?.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -74,6 +77,9 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredAndSortedTransactions.length / itemsPerPage)
+  useEffect(() => {
+    setCurrentPage(page => Math.min(page, Math.max(1, totalPages)))
+  }, [totalPages])
   const startIndex = (currentPage - 1) * itemsPerPage
   const endIndex = startIndex + itemsPerPage
   const paginatedTransactions = filteredAndSortedTransactions.slice(startIndex, endIndex)
@@ -120,7 +126,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
         onCancel={() => setDeleteConfirm(null)}
         variant="danger"
       />
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 transition-colors duration-300">
+      <div className="transaction-table bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors duration-300">
       {/* Filters */}
       <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 transition-colors">
         <div className="flex flex-col gap-3">
@@ -129,6 +135,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
+              aria-label="Search transactions"
               placeholder="Search transactions..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -139,6 +146,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
           <div className="flex flex-wrap gap-2 items-center">
             <Filter className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
             <select
+              aria-label="Transaction type"
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as TransactionType | 'all')}
               className="flex-1 min-w-[110px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
@@ -148,6 +156,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
               <option value="outcome">Outcome</option>
             </select>
             <select
+              aria-label="Transaction category"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="flex-1 min-w-[130px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
@@ -158,6 +167,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
               ))}
             </select>
             <select
+              aria-label="Transaction account"
               value={accountFilter}
               onChange={(e) => setAccountFilter(e.target.value)}
               className="flex-1 min-w-[130px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
@@ -196,7 +206,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
               <EmptyState
                 icon={Receipt}
                 title="No transactions yet"
-                description="Start tracking your finances by adding your first transaction"
+                description={emptyDescription}
                 action={onAddTransaction ? {
                   label: 'Add Transaction',
                   onClick: onAddTransaction,
@@ -212,21 +222,21 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
               key={transaction.id}
               className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3 animate-fadeIn"
             >
-              <div className="flex items-start justify-between">
+              <div className="flex flex-col gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       transaction.type === 'income'
                         ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
                         : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
-                    } transition-colors`}>
+                    } transition-colors break-words max-w-full`}>
                       {transaction.category?.name || 'Uncategorized'}
                     </span>
                     <span className={`text-sm font-bold ${
                       transaction.type === 'income'
                         ? 'text-green-600 dark:text-green-400'
                         : 'text-red-600 dark:text-red-400'
-                    } transition-colors`}>
+                    } transition-colors tabular-nums break-all`}>
                       {transaction.type === 'income' ? '+' : '-'}
                       {formatCurrency(Number(transaction.amount))}
                     </span>
@@ -234,27 +244,27 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                   {transaction.description && (
                     <p className="text-sm text-gray-700 dark:text-gray-300 mb-1 line-clamp-2">{transaction.description}</p>
                   )}
-                  <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400">
                     <span>{format(new Date(transaction.occurred_at), 'MMM dd, yyyy')}</span>
                     {transaction.account?.name && (
                       <span>• {transaction.account.name}</span>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center gap-1 ml-2">
+                <div className="flex items-center justify-end gap-2 border-t border-gray-200 dark:border-gray-700 pt-2">
                   <button
                     onClick={() => onEdit(transaction)}
-                    className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-md transition-colors"
+                    className="inline-flex items-center gap-2 px-3 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-md transition-colors"
                     title="Edit"
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-4 w-4" aria-hidden="true" /> Edit
                   </button>
                   <button
                     onClick={() => handleDeleteClick(transaction)}
-                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
+                    className="inline-flex items-center gap-2 px-3 text-sm text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
                     title="Delete"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" aria-hidden="true" /> Delete
                   </button>
                 </div>
               </div>
@@ -269,31 +279,33 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
           <thead className="bg-gray-50 dark:bg-gray-900/50 transition-colors">
             <tr>
               <th
-                onClick={() => handleSort('date')}
+                aria-sort={sortBy === 'date' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
                 className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
-                Date
+                <button onClick={() => handleSort('date')} className="inline-flex items-center gap-1 font-medium" aria-label="Sort by date">Date
                 {sortBy === 'date' && (
                   <span className="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>
                 )}
+                </button>
               </th>
               <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors">
                 Category
               </th>
-              <th className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors">
                 Account
               </th>
-              <th className="hidden xl:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors">
                 Description
               </th>
               <th
-                onClick={() => handleSort('amount')}
-                className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                aria-sort={sortBy === 'amount' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+                className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
-                Amount
+                <button onClick={() => handleSort('amount')} className="inline-flex items-center gap-1 font-medium" aria-label="Sort by amount">Amount
                 {sortBy === 'amount' && (
                   <span className="ml-1">{sortOrder === 'asc' ? '↑' : '↓'}</span>
                 )}
+                </button>
               </th>
               <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors">
                 Actions
@@ -316,7 +328,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                     <EmptyState
                       icon={Receipt}
                       title="No transactions yet"
-                      description="Start tracking your finances by adding your first transaction"
+                      description={emptyDescription}
                       action={onAddTransaction ? {
                         label: 'Add Transaction',
                         onClick: onAddTransaction,
@@ -346,12 +358,12 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                   <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 transition-colors">
                     {transaction.description || '—'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap text-right tabular-nums">
                     <span
                       className={`text-sm font-semibold ${
                         transaction.type === 'income'
-                          ? 'text-green-600'
-                          : 'text-red-600'
+                          ? 'text-green-700 dark:text-green-400'
+                          : 'text-red-700 dark:text-red-400'
                       }`}
                     >
                       {transaction.type === 'income' ? '+' : '-'}
@@ -388,14 +400,15 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
           {/* Pagination Info */}
           <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 transition-colors text-center sm:text-left">
-            Showing {startIndex + 1} to {Math.min(endIndex, filteredAndSortedTransactions.length)} of{' '}
+            Showing {filteredAndSortedTransactions.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredAndSortedTransactions.length)} of{' '}
             {filteredAndSortedTransactions.length}
           </div>
 
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-center">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-center">
               <button
+                aria-label="Previous page"
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
                 className="px-2.5 sm:px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -404,7 +417,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                 <span className="hidden sm:inline ml-1">Previous</span>
               </button>
               
-              <div className="flex items-center gap-0.5 sm:gap-1">
+              <div className="flex flex-wrap justify-center items-center gap-0.5 sm:gap-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                   .filter(page => {
                     // Show first page, last page, current page, and pages around current
@@ -425,6 +438,8 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                           <span className="px-1 sm:px-2 text-gray-500 dark:text-gray-400 transition-colors text-xs sm:text-sm">...</span>
                         )}
                         <button
+                          aria-label={`Page ${page}`}
+                          aria-current={currentPage === page ? 'page' : undefined}
                           onClick={() => setCurrentPage(page)}
                           className={`px-2.5 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors ${
                             currentPage === page
@@ -440,6 +455,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
               </div>
 
               <button
+                aria-label="Next page"
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
                 className="px-2.5 sm:px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

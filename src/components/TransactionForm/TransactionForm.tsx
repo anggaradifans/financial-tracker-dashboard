@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useId } from 'react'
 import { Transaction, Account, Category, TransactionType } from '../../types/financial'
 import { format } from 'date-fns'
 import { X, Loader2 } from 'lucide-react'
@@ -21,6 +21,33 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
   onCancel,
   currency = 'IDR',
 }) => {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    const trigger = document.activeElement as HTMLElement | null
+    dialog?.showModal()
+    return () => {
+      dialog?.close()
+      trigger?.focus()
+    }
+  }, [])
+
+  const handleDialogKeyDown = (event: React.KeyboardEvent<HTMLDialogElement>) => {
+    if (event.key !== 'Tab') return
+    const controls = event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled)')
+    const first = controls[0]
+    const last = controls[controls.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last?.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first?.focus()
+    }
+  }
+
   const [formData, setFormData] = useState({
     type: (transaction?.type || 'outcome') as TransactionType,
     amount: transaction?.amount?.toString() || '',
@@ -123,14 +150,15 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50 p-0 sm:p-4 animate-fadeIn">
+    <dialog ref={dialogRef} aria-labelledby={titleId} onKeyDown={handleDialogKeyDown} onCancel={event => { event.preventDefault(); if (!loading) onCancel() }} className="fixed inset-0 m-0 w-full h-full max-w-none max-h-none bg-transparent backdrop:bg-black/50 dark:backdrop:bg-black/70 open:flex items-center justify-center p-0 sm:p-4">
       <div className="bg-white dark:bg-gray-800 rounded-none sm:rounded-lg shadow-xl max-w-2xl w-full h-full sm:h-auto sm:max-h-[90vh] overflow-y-auto pb-safe animate-scaleIn transition-colors duration-300">
         <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center transition-colors">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white transition-colors">
+          <h2 id={titleId} className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white transition-colors">
             {transaction ? 'Edit Transaction' : 'Add Transaction'}
           </h2>
           <button
             onClick={onCancel}
+            disabled={loading}
             aria-label="Close form"
             className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           >
@@ -325,7 +353,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </dialog>
   )
 }
 
