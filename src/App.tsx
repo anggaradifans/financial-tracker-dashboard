@@ -33,11 +33,11 @@ const AppContent = () => {
       )}
       <Routes>
       {/* Demo route - accessible without authentication */}
-      <Route path="/demo" element={<DemoDashboard />} />
+      <Route path="/demo/*" element={<DemoDashboard />} />
       
       {/* Protected routes */}
       <Route
-        path="/dashboard"
+        path="/dashboard/*"
         element={user ? <Dashboard /> : <Navigate to="/" replace />}
       />
       
