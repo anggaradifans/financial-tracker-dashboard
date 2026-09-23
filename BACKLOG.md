@@ -4,17 +4,23 @@ This backlog is ordered by the value it adds to someone tracking personal financ
 
 ## Next
 
-### Scheduled and recurring transactions
-
-Let people create recurring income, bills, subscriptions, and savings transfers. The dashboard should show upcoming items separately from completed transactions, with a clear action to confirm, skip, or edit each occurrence.
-
-**Technical approach:** Add `recurring_transactions` and generated-occurrence metadata to the Supabase schema. Use a scheduled Supabase Edge Function to create due occurrences idempotently, keyed by the schedule and due date. Add an Upcoming view to the Overview route, and provide confirm, skip, and edit actions that update only the relevant occurrence or the future schedule.
-
 ### Transfers and per-account balances
 
 Treat a transfer as one linked action that decreases one account and increases another. Show a trustworthy balance for each account and prevent transfers from being counted as income or spending.
 
 **Technical approach:** Add a `transfer_id` and a `transfer` transaction type. Create the debit and credit rows in one database transaction, enforce that their amounts and currencies match, and exclude transfers from income, outcome, budgets, and analytics queries. Calculate account balances from non-deleted transaction history rather than storing a mutable balance on the account row.
+
+### Financial goals and sinking funds
+
+Support goals such as an emergency fund, a holiday, or annual insurance. Each goal needs a target, date, contribution history, and a clear distinction from monthly spending budgets.
+
+#### Emergency fund goal based on average monthly expenses
+
+Let someone create a personal emergency-fund goal with a suggested target equal to six times their average monthly essential expenses. The setup flow should show the completed months, categories, exclusions, and calculation used; the person can adjust the expense basis or target before saving. Track explicitly allocated savings and show current coverage in months, remaining amount, and progress toward the goal. Present this as a personalised suggestion based on recorded spending, not universal financial advice.
+
+**Technical approach:** Create `goals`, `goal_contributions`, and per-goal expense-category-rule tables. Give goals a type, target amount, currency, target-month multiplier, calculation-window length, status, and accepted-calculation snapshot. Calculate the recommendation through an authenticated database function using non-deleted outcome transactions from the last six completed calendar months, excluding transfers and categories the person excludes. Return a transparent per-month and per-category breakdown, and persist the calculation inputs and result when the target is accepted so later transaction edits do not silently change the agreed target. Link a contribution to a transaction only when the user explicitly chooses it, so normal expenses do not affect goal progress. Add a goal detail route with progress, target date, contribution timeline, and a deliberate “refresh recommendation” action. Enforce owner-scoped RLS, decimal-safe money calculations, and tests for sparse history, category exclusions, refunds, currency handling, and historical transaction edits.
+
+**Dependencies and sequencing:** Deliver transfers and per-account balances first, so allocated savings and excluded transfers are trustworthy. The first version can track manual contributions; account-linked protected balances can follow once account ownership and balances are reliable.
 
 ### CSV import with a review step
 
@@ -30,11 +36,11 @@ Let a person choose a warning threshold for each budget. Start with in-app alert
 
 ## Later
 
-### Financial goals and sinking funds
+### Scheduled and recurring transactions
 
-Support goals such as an emergency fund, a holiday, or annual insurance. Each goal needs a target, date, contribution history, and a clear distinction from monthly spending budgets.
+The existing email receipt worker already captures some completed transactions. Add schedules where they provide something extra: visibility of upcoming income, bills, subscriptions, and savings transfers, plus coverage for items that do not produce a usable email receipt. Show planned occurrences separately from completed transactions, and let the person confirm, skip, or edit an occurrence. Match an incoming receipt to a planned occurrence for review rather than creating a second transaction.
 
-**Technical approach:** Create `goals` and `goal_contributions` tables. Link a contribution to a transaction only when the user explicitly chooses it, so normal expenses do not affect goal progress. Add a goal detail route with progress, target date, and contribution timeline.
+**Technical approach:** Add `recurring_transactions` and planned-occurrence records keyed by schedule and due date. Generate plans idempotently, but do not insert an actual financial transaction merely because a due date arrived. Reconcile email-worker results with planned occurrences using source identifiers and an explicit match or review flow; handle changed amounts, shifted dates, missing receipts, and duplicate email/PDF deliveries. Only confirmed or imported actual transactions affect balances, budgets, and emergency-fund expense averages.
 
 ### Multi-currency support
 
