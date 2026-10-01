@@ -22,12 +22,6 @@ Let someone create a personal emergency-fund goal with a suggested target equal 
 
 **Dependencies and sequencing:** Deliver transfers and per-account balances first, so allocated savings and excluded transfers are trustworthy. The first version can track manual contributions; account-linked protected balances can follow once account ownership and balances are reliable.
 
-### CSV import with a review step
-
-Allow an exported bank statement to be mapped to the app's fields, previewed, and checked for duplicates before anything is saved. Keep the existing CSV export as the matching data-portability path.
-
-**Technical approach:** Parse CSV files in the browser with a maintained parser, then show column mapping, validation errors, and a preview before upload. Generate a transaction fingerprint from account, date, amount, type, and normalized description; use a unique database constraint plus an import batch record to prevent duplicates. Insert only validated rows through a server-side function or an authenticated bulk endpoint.
-
 ### Budget alerts
 
 Let a person choose a warning threshold for each budget. Start with in-app alerts, then consider optional email or Telegram notifications only if the user enables them.
@@ -84,7 +78,20 @@ Persist selected transaction filters and date ranges in the URL so a person can 
 
 Offer a complete export, a clear retention explanation, and a deliberate account-deletion flow. Confirm the exact data that will be removed before performing the deletion.
 
-**Technical approach:** Generate an authenticated export bundle that includes transactions, accounts, categories, budgets, and attachments metadata. For deletion, require recent authentication and a typed confirmation, then run a server-side purge that removes database rows and private storage objects in a defined order. Keep an audit event without retaining deleted financial data.
+## Completed
+
+### Bank statement import with a review step
+
+Allow exported bank statements (PDF e-statements) to be parsed in the browser, previewed, categorized, and checked for duplicates before saving.
+
+**Delivered functionality:**
+- **In-browser extraction:** Extracts text in-memory using `pdfjs-dist` without uploading user documents to external servers, including on-the-fly decryption for password-protected statements.
+- **Parser registry:** Implemented adapters for Bank Mandiri (multi-line narration, WIB timezone normalization, boilerplate filtering) and Jenius (trailing signed amounts, account holder filtering), plus an AI fallback parser powered by Gemini Flash for unknown statement formats.
+- **Smart classification & duplicate detection:** Auto-infers transaction categories and detects potential duplicates against existing Supabase transactions within ±1 day tolerance.
+- **Interactive review modal:** Allows inline editing of descriptions, category selection, row selection/removal, and bulk insertion directly into the user's transaction table.
+- **Theme support:** Fully integrated with both light and dark mode dashboard themes.
+
+*(Note: Generic CSV statement mapping can extend this existing review and duplicate-checking pipeline if needed.)*
 
 ## Delivery standards
 
