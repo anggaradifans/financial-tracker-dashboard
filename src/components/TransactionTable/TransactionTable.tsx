@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { Transaction, TransactionType, Account, Category } from '../../types/financial'
 import { format } from 'date-fns'
-import { Edit, Trash2, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Edit, Trash2, Search, Filter, ChevronLeft, ChevronRight, Upload } from 'lucide-react'
 import { TableRowSkeleton } from '../SkeletonLoader'
 import EmptyState from '../EmptyState'
 import ConfirmDialog from '../ConfirmDialog'
@@ -14,6 +14,7 @@ interface TransactionTableProps {
   loading?: boolean
   currency?: string
   onAddTransaction?: () => void
+  onImportStatement?: () => void
   accounts?: Account[]
   categories?: Category[]
   emptyDescription?: string
@@ -26,6 +27,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   loading,
   currency = 'IDR',
   onAddTransaction,
+  onImportStatement,
   accounts = [],
   categories = [],
   emptyDescription = 'Start tracking your finances by adding your first transaction',
@@ -183,6 +185,16 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                 className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
               >
                 Clear filters
+              </button>
+            )}
+            {onImportStatement && (
+              <button
+                type="button"
+                onClick={onImportStatement}
+                className="px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors whitespace-nowrap inline-flex items-center gap-1.5 ml-auto"
+              >
+                <Upload className="h-3.5 w-3.5 text-gray-500" />
+                Import Statement
               </button>
             )}
           </div>
