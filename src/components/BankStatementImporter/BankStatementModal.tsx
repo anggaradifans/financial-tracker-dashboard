@@ -300,15 +300,15 @@ export const BankStatementModal: React.FC<BankStatementModalProps> = ({
             onClick={handleClose}
           />
 
-          <div className="inline-block bg-white dark:bg-gray-850 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all w-full max-w-5xl my-8 p-6 border border-gray-100 dark:border-gray-700/80 animate-scaleIn">
+          <div className="inline-block bg-white dark:bg-gray-800 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all w-full max-w-5xl my-8 p-6 border border-gray-200 dark:border-gray-700 animate-scaleIn transition-colors duration-300">
             {/* Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700/80 mb-5">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-200 dark:border-gray-700 mb-5">
               <div className="flex items-center space-x-3">
                 {step === 'review' && (
                   <button
                     type="button"
                     onClick={() => setStep('upload')}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors mr-1"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors mr-1"
                     title="Upload another statement"
                   >
                     <ArrowLeft className="h-4 w-4" />
@@ -318,7 +318,7 @@ export const BankStatementModal: React.FC<BankStatementModalProps> = ({
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     Import Bank Statement PDF
                     {detectedBank && step === 'review' && (
-                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300">
                         {detectedBank}
                       </span>
                     )}
@@ -334,7 +334,7 @@ export const BankStatementModal: React.FC<BankStatementModalProps> = ({
               <button
                 type="button"
                 onClick={handleClose}
-                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -376,7 +376,7 @@ export const BankStatementModal: React.FC<BankStatementModalProps> = ({
                       type="button"
                       onClick={handleAiFallback}
                       disabled={isLoading}
-                      className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 shadow-sm transition-colors whitespace-nowrap"
+                      className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 shadow-sm transition-colors whitespace-nowrap"
                     >
                       {isLoading ? (
                         <>
@@ -418,11 +418,11 @@ export const BankStatementModal: React.FC<BankStatementModalProps> = ({
                 </div>
 
                 {/* Action Footer */}
-                <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-gray-700/80">
+                <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                   <button
                     type="button"
                     onClick={() => setStep('upload')}
-                    className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                    className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                   >
                     Upload Another Statement
                   </button>
@@ -431,7 +431,7 @@ export const BankStatementModal: React.FC<BankStatementModalProps> = ({
                     <button
                       type="button"
                       onClick={handleClose}
-                      className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                      className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                     >
                       Cancel
                     </button>
@@ -439,7 +439,7 @@ export const BankStatementModal: React.FC<BankStatementModalProps> = ({
                       type="button"
                       onClick={handleSaveToTransactions}
                       disabled={isSaving || selectedCount === 0}
-                      className="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm transition-colors"
+                      className="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm transition-colors"
                     >
                       {isSaving ? (
                         <>

@@ -57,8 +57,8 @@ export const PdfDropzone: React.FC<PdfDropzoneProps> = ({ onFileLoaded, isLoadin
         onClick={() => !isLoading && fileInputRef.current?.click()}
         className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center ${
           isDragOver
-            ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20'
-            : 'border-gray-300 dark:border-gray-600 hover:border-indigo-400 dark:hover:border-indigo-500 bg-gray-50/50 dark:bg-gray-800/40'
+            ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/30'
+            : 'border-gray-300 dark:border-gray-600 hover:border-primary-500 dark:hover:border-primary-400 bg-gray-50/50 dark:bg-gray-900/40'
         } ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
       >
         <input
@@ -71,14 +71,14 @@ export const PdfDropzone: React.FC<PdfDropzoneProps> = ({ onFileLoaded, isLoadin
 
         {isLoading ? (
           <div className="flex flex-col items-center">
-            <RefreshCw className="h-12 w-12 text-indigo-500 animate-spin mb-3" />
+            <RefreshCw className="h-12 w-12 text-primary-500 animate-spin mb-3" />
             <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Extracting and decrypting statement...
             </p>
           </div>
         ) : (
           <div className="flex flex-col items-center">
-            <div className="h-14 w-14 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4 shadow-sm">
+            <div className="h-14 w-14 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-400 mb-4 shadow-sm">
               <UploadCloud className="h-7 w-7" />
             </div>
             <h4 className="text-base font-semibold text-gray-800 dark:text-gray-100 mb-1">
@@ -87,7 +87,7 @@ export const PdfDropzone: React.FC<PdfDropzoneProps> = ({ onFileLoaded, isLoadin
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 max-w-sm">
               Supports Mandiri and Jenius e-statements. Processed 100% locally in your browser.
             </p>
-            <span className="inline-flex items-center px-3.5 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 shadow-sm">
+            <span className="inline-flex items-center px-3.5 py-1.5 rounded-lg text-xs font-medium bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
               <FileText className="h-3.5 w-3.5 mr-1.5 text-gray-500" />
               Browse PDF file
             </span>

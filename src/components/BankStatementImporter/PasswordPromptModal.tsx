@@ -35,7 +35,7 @@ export const PasswordPromptModal: React.FC<PasswordPromptModalProps> = ({
           onClick={onCancel}
         />
 
-        <div className="inline-block bg-white dark:bg-gray-800 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-md w-full p-6 border border-gray-100 dark:border-gray-700 animate-scaleIn">
+        <div className="inline-block bg-white dark:bg-gray-800 rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-md w-full p-6 border border-gray-200 dark:border-gray-700 animate-scaleIn transition-colors duration-300">
           <div className="flex items-center mb-4">
             <div className="h-10 w-10 rounded-xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400 mr-3">
               <Lock className="h-5 w-5" />
@@ -66,7 +66,7 @@ export const PasswordPromptModal: React.FC<PasswordPromptModalProps> = ({
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="e.g. Date of birth (DDMMYYYY)"
                   autoFocus
-                  className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 pr-10"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 pr-10 transition-colors"
                 />
                 <button
                   type="button"
@@ -96,7 +96,7 @@ export const PasswordPromptModal: React.FC<PasswordPromptModalProps> = ({
               <button
                 type="submit"
                 disabled={!password.trim()}
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm transition-colors"
               >
                 Unlock & Parse
               </button>

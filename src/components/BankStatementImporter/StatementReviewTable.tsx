@@ -67,8 +67,8 @@ export const StatementReviewTable: React.FC<StatementReviewTableProps> = ({
                 key={c.tempId}
                 className={`transition-colors ${
                   isSelected
-                    ? 'hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20'
-                    : 'opacity-60 bg-gray-50/50 dark:bg-gray-850/40 hover:opacity-90'
+                    ? 'hover:bg-primary-50/30 dark:hover:bg-primary-950/20'
+                    : 'opacity-60 bg-gray-50/50 dark:bg-gray-900/40 hover:opacity-90'
                 }`}
               >
                 {/* Selection Checkbox */}
@@ -77,7 +77,7 @@ export const StatementReviewTable: React.FC<StatementReviewTableProps> = ({
                     type="checkbox"
                     checked={c.selected}
                     onChange={() => onToggleCandidate(c.tempId)}
-                    className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary-600 focus:ring-primary-500 cursor-pointer"
                   />
                 </td>
 
@@ -92,7 +92,7 @@ export const StatementReviewTable: React.FC<StatementReviewTableProps> = ({
                     type="text"
                     value={c.description}
                     onChange={(e) => onUpdateCandidate(c.tempId, { description: e.target.value })}
-                    className="w-full bg-transparent border-b border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-indigo-500 dark:focus:border-indigo-500 focus:bg-white dark:focus:bg-gray-700 focus:outline-none px-1 py-0.5 rounded text-gray-900 dark:text-gray-100 text-xs sm:text-sm transition-colors"
+                    className="w-full bg-transparent border-b border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-primary-500 dark:focus:border-primary-500 focus:bg-white dark:focus:bg-gray-700 focus:outline-none px-1 py-0.5 rounded text-gray-900 dark:text-gray-100 text-xs sm:text-sm transition-colors"
                   />
                 </td>
 
@@ -107,7 +107,7 @@ export const StatementReviewTable: React.FC<StatementReviewTableProps> = ({
                         suggestedCategoryName: selectedCat ? selectedCat.name : c.suggestedCategoryName,
                       });
                     }}
-                    className="w-full text-xs bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-full text-xs bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-2 py-1.5 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   >
                     <option value="">-- {c.suggestedCategoryName || 'Uncategorized'} --</option>
                     {categories.map((cat) => (
