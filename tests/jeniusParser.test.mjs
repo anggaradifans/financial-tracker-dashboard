@@ -32,3 +32,17 @@ test('jeniusParser detects and extracts rows, filtering user name and balance ro
   assert.ok(rows[1].description.includes('Top up Gopay'));
   assert.equal(rows[1].suggestedCategoryName, 'Transfer');
 });
+
+test('jeniusParser filters arbitrary accountHolderName passed in options and generic cardholder lines', async () => {
+  const { jeniusParser } = await loadTsModule('../src/utils/parsers/jeniusParser.ts', import.meta.url);
+  const textWithCustomUser = `
+Jenius Transaction History
+Account Holder: Budi Santoso
+12 Sep 2026 Budi Santoso -50.000
+14 Sep 2026 Kopi Kenangan -25.000
+`;
+  const rows = jeniusParser.parse(textWithCustomUser, { defaultYear: 2026, accountHolderName: 'Budi Santoso' });
+  assert.equal(rows.length, 1);
+  assert.ok(rows[0].description.includes('Kopi Kenangan'));
+});
+

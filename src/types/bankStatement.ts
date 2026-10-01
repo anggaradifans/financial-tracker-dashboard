@@ -19,6 +19,7 @@ export interface ParsedCandidate {
 export interface BankParserOptions {
   defaultYear?: number;
   accountId?: string;
+  accountHolderName?: string;
 }
 
 export interface BankParser {

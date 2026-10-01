@@ -88,6 +88,9 @@ export const jeniusParser: BankParser = {
 
   parse(rawText: string, options?: BankParserOptions): ParsedCandidate[] {
     const fallbackYear = options?.defaultYear || new Date().getFullYear();
+    const holderRegex = options?.accountHolderName
+      ? new RegExp(options.accountHolderName.trim().replace(/\s+/g, '\\s+'), 'i')
+      : null;
     const rows: ParsedCandidate[] = [];
     const lines = rawText
       .split(/\r?\n/)
@@ -97,6 +100,8 @@ export const jeniusParser: BankParser = {
     const datePattern = /^(?<date>(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4})|(?:\d{1,2}\s+[A-Za-z]{3,}(?:\s+\d{2,4})?))\s+(?<rest>.+)$/;
 
     for (const line of lines) {
+      if (/^(?:nama\s+pemilik|account\s+holder|cardholder)/i.test(line)) continue;
+      if (holderRegex && holderRegex.test(line)) continue;
       if (/angga\s+radifan\s+sumarna/i.test(line)) continue;
 
       const dateMatch = line.match(datePattern);
