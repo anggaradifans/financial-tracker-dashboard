@@ -63,7 +63,7 @@ check can infer which legitimate entries the owner made.
 
 ## Credential inventory conclusion
 
-`VITE_GEMINI_API_KEY` exists in ignored local configuration and in Vercel, but
+`GEMINI_API_KEY` exists in ignored local configuration and in Vercel, but
 Git history shows it only as a placeholder and no source consumer was found.
 Vite only publishes referenced environment values. Current public bundles have
 no detected Google API-key pattern. There is no evidence this key was exposed by

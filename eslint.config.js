@@ -29,10 +29,18 @@ export default tseslint.config(
     },
   },
   {
+    files: ['api/**/*.ts'],
+    rules: {
+      'no-undef': 'off',
+    },
+  },
+  {
     files: ['tests/**/*.mjs'],
     languageOptions: {
       globals: {
+        AbortSignal: 'readonly',
         Buffer: 'readonly',
+        Request: 'readonly',
         Response: 'readonly',
         URL: 'readonly',
         console: 'readonly',

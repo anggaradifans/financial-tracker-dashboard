@@ -8,67 +8,32 @@ export interface GeminiParsedRow {
   type: 'income' | 'outcome';
 }
 
+// Must match MAX_STATEMENT_CHARS in api/_lib/parseStatementHandler.ts.
+const MAX_STATEMENT_CHARS = 100_000;
+
+/**
+ * Sends statement text to the /api/parse-statement function, which holds the
+ * Gemini key server-side. The access token identifies the signed-in user.
+ */
 export async function parseWithGemini(
   rawText: string,
-  apiKey?: string,
+  accessToken: string,
   options?: { accountId?: string }
 ): Promise<ParsedCandidate[]> {
-  const resolvedKey = apiKey || (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY);
-  if (!resolvedKey) {
-    throw new Error('Gemini API key is required for AI parsing. Configure VITE_GEMINI_API_KEY.');
-  }
+  const response = await fetch('/api/parse-statement', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ rawText: rawText.slice(0, MAX_STATEMENT_CHARS) }),
+  });
 
-  const prompt = `You are a financial document parser. Extract all transaction line items from the following bank statement text into a clean JSON array.
-Text:
-${rawText.slice(0, 100000)}
-`;
-
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${resolvedKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: {
-            type: 'OBJECT',
-            properties: {
-              transactions: {
-                type: 'ARRAY',
-                items: {
-                  type: 'OBJECT',
-                  properties: {
-                    date: { type: 'STRING', description: 'YYYY-MM-DD' },
-                    description: { type: 'STRING' },
-                    amount: { type: 'NUMBER', description: 'Positive number' },
-                    type: { type: 'STRING', enum: ['income', 'outcome'] },
-                  },
-                  required: ['date', 'description', 'amount', 'type'],
-                },
-              },
-            },
-            required: ['transactions'],
-          },
-        },
-      }),
-    }
-  );
-
+  const body = await response.json().catch(() => null);
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API failed: ${response.status} ${errorText}`);
+    const message = body?.error?.message || `AI parsing failed (${response.status}).`;
+    const correlationId = body?.error?.correlationId;
+    throw new Error(correlationId ? `${message} (ref: ${correlationId})` : message);
   }
 
-  const data = await response.json();
-  const textOutput = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!textOutput) {
-    return [];
-  }
-
-  const parsed = JSON.parse(textOutput) as { transactions: GeminiParsedRow[] };
-  const rawList = parsed.transactions || [];
+  const rawList: GeminiParsedRow[] = body?.data?.transactions || [];
 
   return rawList.map((row, idx) => {
     const occurredAt = new Date(`${row.date}T12:00:00Z`).toISOString();
@@ -77,8 +42,8 @@ ${rawText.slice(0, 100000)}
       tempId: `gemini-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
       occurred_at: occurredAt,
       date_raw: row.date,
-      description: row.description.slice(0, 500),
-      amount: Math.abs(row.amount),
+      description: row.description,
+      amount: row.amount,
       type: row.type,
       suggestedCategoryName: inferred.categoryName,
       categoryId: inferred.categoryId,

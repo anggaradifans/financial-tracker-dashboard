@@ -186,12 +186,17 @@ export const BankStatementModal: React.FC<BankStatementModalProps> = ({
     setGeneralError(null);
 
     try {
-      const aiCandidates = await parseWithGemini(rawPdfText);
+      // Read the session per call so a refreshed token is used.
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session?.access_token) throw new Error('Please sign in to use AI parsing.');
+
+      const aiCandidates = await parseWithGemini(rawPdfText, session.access_token);
       setDetectedBank('AI (Gemini Flash)');
       setNeedsAiFallback(false);
       await runDuplicateCheckAndFinishParsing(aiCandidates, 'AI');
     } catch (err: any) {
-      setGeneralError(err?.message || 'AI parsing failed. Check your Gemini API key.');
+      setGeneralError(err?.message || 'AI parsing failed. Please try again later.');
       setIsLoading(false);
     }
   };
