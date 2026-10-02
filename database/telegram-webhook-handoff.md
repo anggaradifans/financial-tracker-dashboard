@@ -25,13 +25,11 @@ Read these files first:
 
 - `database/migrations/20260915_browser_rls.sql`
 - `database/README.md`
-- `telegram-webhook-example.ts`
 
-The webhook file in this repository is an example. Its relationship to the
-deployed bot has not been verified. Locate the real webhook, bot handlers,
-workers, and shared database helpers. If their source is unavailable, ask for
-the repository/path or source export rather than treating the example as
-production code.
+This repository does not contain the webhook source (the old
+`telegram-webhook-example.ts` sample was removed). Locate the real webhook, bot
+handlers, workers, and shared database helpers. If their source is unavailable,
+ask for the repository/path or source export.
 
 ## Decisions already made
 
