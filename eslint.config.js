@@ -11,8 +11,6 @@ export default tseslint.config(
       'playwright-report',
       'test-results',
       'storybook-static',
-      'telegram-linking-component.tsx',
-      'telegram-webhook-example.ts',
     ],
   },
   js.configs.recommended,
