@@ -4,6 +4,9 @@
   "type": "module",
   "description": "Simple user registration page with Supabase",
   "main": "index.html",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "test:security": "node --experimental-vm-modules --test tests/*.test.mjs",
     "test:database": "bash database/tests/run.sh",

@@ -9,10 +9,12 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22.13.0
+          # newest 24.x patch (security releases), not the runner's cached one
+          node-version: 24
+          check-latest: true
           cache: npm
       - run: npm ci --legacy-peer-deps
       - run: npm run lint
@@ -41,12 +43,14 @@ jobs:
           if [ -n "$E2E_EMAIL" ] && [ -n "$E2E_PASSWORD" ] && [ -n "$VITE_SUPABASE_URL" ] && [ -n "$VITE_SUPABASE_ANON_KEY" ]; then
             echo "available=true" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.config.outputs.available == 'true'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.config.outputs.available == 'true'
         with:
-          node-version: 22.13.0
+          # newest 24.x patch (security releases), not the runner's cached one
+          node-version: 24
+          check-latest: true
           cache: npm
       - run: npm ci --legacy-peer-deps
         if: steps.config.outputs.available == 'true'
