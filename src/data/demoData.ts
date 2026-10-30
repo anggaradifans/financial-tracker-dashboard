@@ -71,17 +71,17 @@ const generateDemoTransactions = (): Transaction[] => {
 
   // Generate outcome transactions for the last 30 days
   const outcomeAmounts = [50000, 75000, 100000, 150000, 200000, 250000, 300000, 500000]
-  const descriptions = [
-    'Lunch at restaurant',
-    'Grocery shopping',
-    'Uber ride',
-    'Coffee with friends',
-    'Movie tickets',
-    'Online shopping',
-    'Electricity bill',
-    'Phone bill',
-    'Gym membership',
-    'Dinner out',
+  const outcomeExamples = [
+    { description: 'Lunch at restaurant', categoryName: 'Food & Dining' },
+    { description: 'Grocery shopping', categoryName: 'Food & Dining' },
+    { description: 'Uber ride', categoryName: 'Transportation' },
+    { description: 'Coffee with friends', categoryName: 'Food & Dining' },
+    { description: 'Movie tickets', categoryName: 'Entertainment' },
+    { description: 'Online shopping', categoryName: 'Shopping' },
+    { description: 'Electricity bill', categoryName: 'Bills & Utilities' },
+    { description: 'Phone bill', categoryName: 'Bills & Utilities' },
+    { description: 'Gym membership', categoryName: 'Entertainment' },
+    { description: 'Dinner out', categoryName: 'Food & Dining' },
   ]
 
   for (let i = 0; i < 25; i++) {
@@ -90,10 +90,11 @@ const generateDemoTransactions = (): Transaction[] => {
     date.setDate(date.getDate() - daysAgo)
     date.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60), 0, 0)
 
-    const category = outcomeCategories[Math.floor(Math.random() * outcomeCategories.length)]
+    const example = outcomeExamples[Math.floor(Math.random() * outcomeExamples.length)]
+    const category = outcomeCategories.find(c => c.name === example.categoryName) || outcomeCategories[0]
     const account = demoAccounts[Math.floor(Math.random() * demoAccounts.length)]
     const amount = outcomeAmounts[Math.floor(Math.random() * outcomeAmounts.length)]
-    const description = descriptions[Math.floor(Math.random() * descriptions.length)]
+    const { description } = example
 
     transactions.push({
       id: `tx-outcome-${i}`,

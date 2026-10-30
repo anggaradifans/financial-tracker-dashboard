@@ -6,5 +6,12 @@
     "api/parse-statement.ts": {
       "maxDuration": 150
     }
-  }
+  },
+  "rewrites": [
+    { "source": "/demo", "destination": "/index.html" },
+    { "source": "/demo/:path*", "destination": "/index.html" },
+    { "source": "/dashboard", "destination": "/index.html" },
+    { "source": "/dashboard/:path*", "destination": "/index.html" },
+    { "source": "/update-password", "destination": "/index.html" }
+  ]
 }
