@@ -140,7 +140,8 @@ On every push to `main` and on every pull request, CI ([.github/workflows/ci.yml
 
 - [supabase/README.md](supabase/README.md): how to make schema changes safely
 - [database/README.md](database/README.md): the RLS access model and its tests
-- [BACKLOG.md](BACKLOG.md): planned features
+- [GitHub Issues](https://github.com/anggaradifans/financial-tracker-dashboard/issues): product backlog and implementation work
+- [docs/engineering-standards.md](docs/engineering-standards.md): delivery standards for new features
 - [docs/superpowers/](docs/superpowers/): the bank statement importer design and plan
 - [.storybook/README.md](.storybook/README.md): Storybook setup
 
