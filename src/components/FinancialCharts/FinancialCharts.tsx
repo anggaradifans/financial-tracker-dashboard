@@ -21,6 +21,41 @@ interface FinancialChartsProps {
   currency?: string
 }
 
+interface CategoryChartEntry {
+  name: string
+  value: number
+}
+
+interface CategoryLegendProps {
+  categories: CategoryChartEntry[]
+  currency: string
+  colors: string[]
+  label: string
+}
+
+const CategoryLegend: React.FC<CategoryLegendProps> = ({ categories, currency, colors, label }) => {
+  const total = categories.reduce((sum, category) => sum + category.value, 0)
+  const formatCurrency = (amount: number) => new Intl.NumberFormat('id-ID', {
+    style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0,
+  }).format(amount)
+
+  return (
+    <ul aria-label={`${label} category amounts`} className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      {categories.map((category, index) => (
+        <li key={category.name} className="flex min-w-0 items-center justify-between gap-3 text-sm">
+          <span className="flex min-w-0 items-center gap-2 text-gray-700 dark:text-gray-300">
+            <span aria-hidden="true" className="h-3 w-3 shrink-0 rounded-sm" style={{ backgroundColor: colors[index % colors.length] }} />
+            <span className="truncate">{category.name}</span>
+          </span>
+          <span className="shrink-0 text-right tabular-nums text-gray-600 dark:text-gray-400">
+            {formatCurrency(category.value)} ({total ? `${((category.value / total) * 100).toFixed(0)}%` : '0%'})
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 const FinancialCharts: React.FC<FinancialChartsProps> = ({
   timeSeriesData,
   categoryBreakdown,
@@ -129,23 +164,20 @@ const FinancialCharts: React.FC<FinancialChartsProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Outcome Categories Pie Chart */}
-            {outcomeCategories.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300 animate-fadeInUp">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4 transition-colors">
-                  Outcome by Category
-                </h3>
-                <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
-              <PieChart>
+        {outcomeCategories.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300 animate-fadeInUp">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4 transition-colors">
+              Outcome by Category
+            </h3>
+            <p className="sr-only" id="outcome-category-summary">
+              Outcome categories: {outcomeCategories.map(category => `${category.name}, ${formatCurrency(category.value)}`).join('; ')}.
+            </p>
+            <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
+              <PieChart aria-describedby="outcome-category-summary">
                 <Pie
                   data={outcomeCategories}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={(entry: any) => {
-                    const total = outcomeCategories.reduce((sum, cat) => sum + cat.value, 0)
-                    const percent = (entry.value / total) * 100
-                    return `${entry.name} ${percent.toFixed(0)}%`
-                  }}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
@@ -160,27 +192,25 @@ const FinancialCharts: React.FC<FinancialChartsProps> = ({
                 <Tooltip content={<CustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
+            <CategoryLegend categories={outcomeCategories} currency={currency} colors={COLORS} label="Outcome" />
           </div>
         )}
 
         {/* Income Categories Pie Chart */}
-            {incomeCategories.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300 animate-fadeInUp" style={{ animationDelay: '100ms' }}>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4 transition-colors">
+        {incomeCategories.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-6 border border-gray-200 dark:border-gray-700 transition-colors duration-300 animate-fadeInUp" style={{ animationDelay: '100ms' }}>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4 transition-colors">
               Income by Category
             </h3>
+            <p className="sr-only" id="income-category-summary">
+              Income categories: {incomeCategories.map(category => `${category.name}, ${formatCurrency(category.value)}`).join('; ')}.
+            </p>
             <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
-              <PieChart>
+              <PieChart aria-describedby="income-category-summary">
                 <Pie
                   data={incomeCategories}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={(entry: any) => {
-                    const total = incomeCategories.reduce((sum, cat) => sum + cat.value, 0)
-                    const percent = (entry.value / total) * 100
-                    return `${entry.name} ${percent.toFixed(0)}%`
-                  }}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
@@ -195,6 +225,7 @@ const FinancialCharts: React.FC<FinancialChartsProps> = ({
                 <Tooltip content={<CustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
+            <CategoryLegend categories={incomeCategories} currency={currency} colors={COLORS} label="Income" />
           </div>
         )}
       </div>

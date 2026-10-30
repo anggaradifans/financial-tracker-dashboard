@@ -286,7 +286,17 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
       </div>
 
       {/* Desktop Table View */}
-      <div className="hidden md:block overflow-x-auto">
+      <div className="hidden md:block">
+        <p id="transaction-table-scroll-hint" className="border-b border-gray-200 bg-gray-50 px-4 py-2 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-300">
+          Scroll horizontally to reach the Actions column.
+        </p>
+        <div
+          className="overflow-x-auto focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 dark:focus:ring-primary-400"
+          role="region"
+          aria-label="Transactions table"
+          aria-describedby="transaction-table-scroll-hint"
+          tabIndex={0}
+        >
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-900/50 transition-colors">
             <tr>
@@ -405,6 +415,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Pagination and Summary */}
