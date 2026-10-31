@@ -141,5 +141,14 @@ This repository's fixture does not reproduce production trigger bodies. The
 separate backend review reports additional combined tests using the audited
 production category-alignment trigger.
 
+A second stage then replays every file in `supabase/migrations/`, starting with
+the production baseline, on minimal Supabase stand-ins
+(`database/tests/baseline_fixture.sql`). It runs as `postgres` so the baseline's
+default privileges apply, which is why a new migration must revoke browser grants
+before granting narrowly. `goals.sql` tests the goals migration (access, the
+calculation, snapshots, contributions) and `goals_concurrency.sh` races two real
+sessions to prove the row locks. On macOS, set `LC_ALL=en_US.UTF-8` if the
+server fails with "postmaster became multithreaded".
+
 References: [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security)
 and [API keys](https://supabase.com/docs/guides/getting-started/api-keys).
