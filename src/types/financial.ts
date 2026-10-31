@@ -84,3 +84,95 @@ export interface BudgetProgress {
   percentage: number
   isOverBudget: boolean
 }
+
+export type GoalKind = 'emergency_fund' | 'custom'
+export type GoalStatus = 'active' | 'completed' | 'archived'
+
+export interface FinancialGoal {
+  id: string
+  user_id: string
+  kind: GoalKind
+  name: string
+  description: string | null
+  currency: string
+  target_amount: number
+  target_date: string | null
+  planned_monthly_amount: number | null
+  status: GoalStatus
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface GoalProgress {
+  goal_id: string
+  currency: string
+  target_amount: number
+  saved_amount: number
+  remaining_amount: number
+  progress_percent: number
+  contribution_count: number
+  last_contributed_on: string | null
+  recommendation_id: string | null
+  average_monthly_essential: number | null
+  months_of_coverage: number | null
+}
+
+export interface GoalContribution {
+  id: string
+  goal_id: string
+  user_id: string
+  contributed_on: string
+  amount: number
+  description: string | null
+  transaction_id: string | null
+  created_at: string
+}
+
+export interface GoalRecommendation {
+  id: string
+  goal_id: string
+  basis_months: number
+  multiplier: number
+  period_start: string
+  period_end: string
+  computed_at: string
+  included_month_count: number
+  average_monthly_essential: number
+  suggested_target: number
+  accepted_target: number
+  skipped_other_currency_count: number
+  timezone: string
+}
+
+export interface GoalBasisMonth {
+  month: string
+  included: boolean
+  exclusion_reason: 'no_data' | 'incomplete_history' | null
+  included_spend: number
+  excluded_spend: number
+  refunds: number
+  basis_amount: number
+}
+
+export interface GoalBasisCategory {
+  category_id: string | null
+  category_name: string
+  included: boolean
+  avg_monthly_amount: number
+}
+
+export interface EmergencyFundBasis {
+  currency: string
+  basis_months: number
+  multiplier: number
+  period_start: string
+  period_end: string
+  included_month_count: number
+  min_months_required: number
+  average_monthly_essential: number | null
+  suggested_target: number | null
+  skipped_other_currency_count: number
+  months: GoalBasisMonth[]
+  categories: GoalBasisCategory[]
+}

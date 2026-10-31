@@ -1,22 +1,7 @@
 -- Run after fixture.sql and the migration in a disposable database.
 \set ON_ERROR_STOP on
 BEGIN;
-CREATE SCHEMA test_support;
-GRANT USAGE ON SCHEMA test_support TO anon, authenticated, service_role;
-CREATE FUNCTION test_support.assert_true(value boolean, message text) RETURNS void LANGUAGE plpgsql AS $$
-BEGIN
-  IF value IS DISTINCT FROM true THEN RAISE EXCEPTION 'FAIL: %', message; END IF;
-END $$;
-CREATE FUNCTION test_support.assert_rejected(statement text, expected_state text) RETURNS void LANGUAGE plpgsql AS $$
-BEGIN
-  BEGIN
-    EXECUTE statement;
-  EXCEPTION WHEN OTHERS THEN
-    IF SQLSTATE = expected_state THEN RETURN; END IF;
-    RAISE;
-  END;
-  RAISE EXCEPTION 'Expected rejection: %', statement;
-END $$;
+\ir support.sql
 
 SELECT test_support.assert_true((SELECT count(*) = 918 FROM public.transactions), 'transactions preserved');
 SELECT test_support.assert_true((SELECT count(*) = 8 FROM public.accounts), 'accounts preserved');

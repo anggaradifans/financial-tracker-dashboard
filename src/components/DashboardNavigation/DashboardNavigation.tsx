@@ -1,8 +1,8 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { BarChart3, LayoutDashboard, ReceiptText, Settings, WalletCards, X } from 'lucide-react'
+import { BarChart3, LayoutDashboard, ReceiptText, Settings, Target, WalletCards, X } from 'lucide-react'
 
-export type DashboardSection = 'overview' | 'transactions' | 'analytics' | 'budgets' | 'settings'
+export type DashboardSection = 'overview' | 'transactions' | 'analytics' | 'budgets' | 'goals' | 'settings'
 
 interface DashboardNavigationProps {
   basePath: '/dashboard' | '/demo'
@@ -15,6 +15,7 @@ const sections: Array<{ id: DashboardSection; label: string; Icon: React.Element
   { id: 'transactions', label: 'Transactions', Icon: ReceiptText },
   { id: 'analytics', label: 'Analytics', Icon: BarChart3 },
   { id: 'budgets', label: 'Budgets', Icon: WalletCards },
+  { id: 'goals', label: 'Goals', Icon: Target },
   { id: 'settings', label: 'Settings', Icon: Settings },
 ]
 

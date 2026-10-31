@@ -14,6 +14,7 @@ import InsightsSection from '../InsightsSection'
 import PeriodFilter from '../PeriodFilter'
 import BudgetManager from '../BudgetManager'
 import BudgetProgressCards from '../BudgetProgressCards'
+import GoalsManager from '../GoalsManager/GoalsManager'
 import ToastNotifications from '../ToastNotifications'
 import ConfirmDialog from '../ConfirmDialog'
 import EmptyState from '../EmptyState'
@@ -28,6 +29,7 @@ const pageDetails = {
   transactions: { title: 'Transactions', description: 'Search, review, and export your financial activity.' },
   analytics: { title: 'Analytics', description: 'Understand income, spending, and category patterns.' },
   budgets: { title: 'Budgets', description: 'Set spending limits and monitor progress.' },
+  goals: { title: 'Goals', description: 'Plan savings targets and track each contribution.' },
   settings: { title: 'Settings', description: 'Manage the accounts and categories used in your transactions.' },
 }
 
@@ -106,6 +108,7 @@ const Dashboard: React.FC = () => {
             {section === 'transactions' && <div className="space-y-6"><PeriodFilter period={period} dateRange={dateRange} onPeriodChange={handlePeriodChange} onCustomRangeChange={setCustomRange} /><section aria-labelledby="all-transactions" className="space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><h2 id="all-transactions" className="text-xl font-semibold">All transactions</h2><div className="flex items-center gap-2"><button onClick={() => setShowImportModal(true)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-gray-300 dark:border-gray-600 px-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"><Upload className="h-4 w-4" aria-hidden="true" />Import PDF</button><button onClick={handleExport} disabled={transactions.length === 0} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"><Download className="h-4 w-4" aria-hidden="true" />Export CSV</button></div></div><TransactionTable transactions={transactions} accounts={accounts} categories={categories} onEdit={openEditTransaction} onDelete={handleDeleteTransaction} currency="IDR" onAddTransaction={openNewTransaction} onImportStatement={() => setShowImportModal(true)} emptyDescription="No transactions in this period. Choose another period or add a transaction." /></section></div>}
             {section === 'analytics' && <div className="space-y-8"><PeriodFilter period={period} dateRange={dateRange} onPeriodChange={handlePeriodChange} onCustomRangeChange={setCustomRange} />{timeSeriesData.length > 0 || categoryBreakdown.length > 0 ? <><FinancialCharts timeSeriesData={timeSeriesData} categoryBreakdown={categoryBreakdown} currency="IDR" />{transactions.length > 0 && <InsightsSection transactions={transactions} categoryBreakdown={categoryBreakdown} dateRange={dateRange} currency="IDR" />}</> : <EmptyState icon={TrendingUp} title="No analytics in this period" description="Choose another reporting period or add a transaction to see trends." action={{ label: 'Add Transaction', onClick: openNewTransaction }} />}</div>}
             {section === 'budgets' && <div className="space-y-8">{budgetProgress.length > 0 && <BudgetProgressCards budgetProgress={budgetProgress} currency="IDR" />}<section aria-labelledby="budget-management"><h2 id="budget-management" className="mb-4 text-xl font-semibold">Manage budgets</h2><BudgetManager budgets={budgets} categories={categories} onAddBudget={async (budget: Omit<Budget, 'id' | 'created_at' | 'category'>) => { await addBudget(budget) }} onUpdateBudget={async (id, updates) => { await updateBudget(id, updates) }} onDeleteBudget={async id => { await deleteBudget(id) }} currency="IDR" /></section></div>}
+            {section === 'goals' && <GoalsManager userId={user?.id} categories={categories} />}
             {section === 'settings' && <section aria-labelledby="account-settings"><h2 id="account-settings" className="mb-4 text-xl font-semibold">Accounts and categories</h2><CategoryAccountManager accounts={accounts} categories={categories} onAddAccount={async (name, currency) => { await addAccount(name, currency) }} onDeleteAccount={deleteAccount} onAddCategory={async (name, allowedType) => { await addCategory(name, allowedType) }} onDeleteCategory={deleteCategory} canDeleteCategory={category => !!user && category.user_id === user.id} /></section>}
           </>}
         </main>
