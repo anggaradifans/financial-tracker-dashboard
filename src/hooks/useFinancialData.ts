@@ -14,6 +14,7 @@ import {
 } from '../types/financial'
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns'
 import { devError } from '../utils/notifications'
+import { assertEditable, buildCategoryBreakdown, buildCreateTransferParams, buildTimeSeries, deleteTransactionRecord, sumBalance, TransferFormValues } from '../utils/transfers'
 
 export const useFinancialData = (userId: string | undefined, dateRange: DateRange | null) => {
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -178,8 +179,21 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
     }
   }
 
+  // Both legs are created by one database call; the idempotency key makes a retry safe.
+  const addTransfer = async (values: TransferFormValues, transferId: string) => {
+    try {
+      const id = await supabaseRest.rpc<string>('create_transfer', buildCreateTransferParams(values, accounts, transferId))
+      await fetchTransactions()
+      return id
+    } catch (err) {
+      devError('[useFinancialData] Error adding transfer:', err)
+      throw err
+    }
+  }
+
   const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
     try {
+      assertEditable(transactions.find(t => t.id === id))
       const dbUpdates = {
         ...updates,
         type: updates.type,
@@ -208,8 +222,11 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
 
   const deleteTransaction = async (id: string) => {
     try {
-      await supabaseRest.update('transactions', { deleted_at: new Date().toISOString() }, { id })
-      setTransactions(prev => prev.filter(t => t.id !== id))
+      const removedIds = await deleteTransactionRecord(transactions, id, {
+        softDelete: recordId => supabaseRest.update('transactions', { deleted_at: new Date().toISOString() }, { id: recordId }),
+        deleteTransfer: transferId => supabaseRest.rpc('delete_transfer', { p_transfer_id: transferId }),
+      })
+      setTransactions(prev => prev.filter(t => !removedIds.includes(t.id)))
     } catch (err) {
       devError('[useFinancialData] Error deleting transaction:', err)
       throw err
@@ -421,9 +438,7 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
 
     const netBalance = income - outcome
 
-    const accountBalance = transactions.reduce((sum, t) => {
-      return sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount))
-    }, 0)
+    const accountBalance = sumBalance(transactions)
 
     return {
       totalIncome: income,
@@ -454,9 +469,7 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
 
     const netBalance = income - outcome
 
-    const accountBalance = thisMonthTransactions.reduce((sum, t) => {
-      return sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount))
-    }, 0)
+    const accountBalance = sumBalance(thisMonthTransactions)
 
     return {
       totalIncome: income,
@@ -488,9 +501,7 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
 
     const netBalance = income - outcome
 
-    const accountBalance = filteredTransactions.reduce((sum, t) => {
-      return sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount))
-    }, 0)
+    const accountBalance = sumBalance(filteredTransactions)
 
     return {
       totalIncome: income,
@@ -512,32 +523,7 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
       })
     }
 
-    // Filter by type if provided
-    if (type) {
-      filtered = filtered.filter(t => t.type === type)
-    }
-
-    const breakdown = filtered.reduce((acc, t) => {
-      const categoryId = t.category_id
-      const categoryName = t.category?.name || 'Unknown'
-      const key = `${categoryId}-${t.type}`
-
-      if (!acc[key]) {
-        acc[key] = {
-          category_id: categoryId,
-          category_name: categoryName,
-          amount: 0,
-          count: 0,
-          type: t.type,
-        }
-      }
-
-      acc[key].amount += Number(t.amount)
-      acc[key].count += 1
-      return acc
-    }, {} as Record<string, CategoryBreakdown>)
-
-    return Object.values(breakdown).sort((a, b) => b.amount - a.amount)
+    return buildCategoryBreakdown(filtered, type)
   }
 
   // Get time series data (optionally filtered by date range)
@@ -552,24 +538,7 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
       })
     }
 
-    const grouped = filteredTransactions.reduce((acc, t) => {
-      const date = new Date(t.occurred_at).toISOString().split('T')[0]
-
-      if (!acc[date]) {
-        acc[date] = { date, income: 0, outcome: 0, net: 0 }
-      }
-
-      if (t.type === 'income') {
-        acc[date].income += Number(t.amount)
-      } else {
-        acc[date].outcome += Number(t.amount)
-      }
-      acc[date].net = acc[date].income - acc[date].outcome
-
-      return acc
-    }, {} as Record<string, TimeSeriesData>)
-
-    return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date))
+    return buildTimeSeries(filteredTransactions)
   }
 
   return {
@@ -581,6 +550,7 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
     error,
     refresh: fetchAllData,
     addTransaction,
+    addTransfer,
     updateTransaction,
     deleteTransaction,
     addAccount,

@@ -12,6 +12,7 @@ import {
   BudgetProgress,
 } from '../types/financial'
 import { demoTransactions, demoAccounts, demoCategories, demoBudgets, DEMO_USER_ID } from '../data/demoData'
+import { buildCategoryBreakdown, buildTimeSeries, sumBalance } from '../utils/transfers'
 
 export const useDemoFinancialData = (dateRange: DateRange | null) => {
   const [loading, setLoading] = useState(false)
@@ -44,6 +45,11 @@ export const useDemoFinancialData = (dateRange: DateRange | null) => {
       category: demoCategories.find(c => c.id === transaction.category_id)!,
       user_id: DEMO_USER_ID,
     } as Transaction
+  }
+
+  const addTransfer = async (_values: unknown, _transferId: string) => {
+    // In demo mode, we don't actually save
+    return Promise.resolve(`demo-transfer-${Date.now()}`)
   }
 
   const updateTransaction = async (id: string, updates: Partial<Transaction>) => {
@@ -114,9 +120,7 @@ export const useDemoFinancialData = (dateRange: DateRange | null) => {
       .reduce((sum, t) => sum + Number(t.amount), 0)
 
     const netBalance = income - outcome
-    const accountBalance = filteredTransactions.reduce((sum, t) => {
-      return sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount))
-    }, 0)
+    const accountBalance = sumBalance(filteredTransactions)
 
     return {
       totalIncome: income,
@@ -132,54 +136,12 @@ export const useDemoFinancialData = (dateRange: DateRange | null) => {
 
   // Get category breakdown
   const getCategoryBreakdown = (type?: TransactionType, _range?: DateRange | null): CategoryBreakdown[] => {
-    let filtered = filteredTransactions
-    if (type) {
-      filtered = filtered.filter(t => t.type === type)
-    }
-
-    const breakdown = filtered.reduce((acc, t) => {
-      const categoryId = t.category_id
-      const categoryName = t.category?.name || 'Unknown'
-      const key = `${categoryId}-${t.type}`
-
-      if (!acc[key]) {
-        acc[key] = {
-          category_id: categoryId,
-          category_name: categoryName,
-          amount: 0,
-          count: 0,
-          type: t.type,
-        }
-      }
-
-      acc[key].amount += Number(t.amount)
-      acc[key].count += 1
-      return acc
-    }, {} as Record<string, CategoryBreakdown>)
-
-    return Object.values(breakdown).sort((a, b) => b.amount - a.amount)
+    return buildCategoryBreakdown(filteredTransactions, type)
   }
 
   // Get time series data
   const getTimeSeriesData = (_range?: DateRange | null): TimeSeriesData[] => {
-    const grouped = filteredTransactions.reduce((acc, t) => {
-      const date = new Date(t.occurred_at).toISOString().split('T')[0]
-
-      if (!acc[date]) {
-        acc[date] = { date, income: 0, outcome: 0, net: 0 }
-      }
-
-      if (t.type === 'income') {
-        acc[date].income += Number(t.amount)
-      } else {
-        acc[date].outcome += Number(t.amount)
-      }
-      acc[date].net = acc[date].income - acc[date].outcome
-
-      return acc
-    }, {} as Record<string, TimeSeriesData>)
-
-    return Object.values(grouped).sort((a, b) => a.date.localeCompare(b.date))
+    return buildTimeSeries(filteredTransactions)
   }
 
   // Get budget progress
@@ -223,6 +185,7 @@ export const useDemoFinancialData = (dateRange: DateRange | null) => {
     error,
     refresh,
     addTransaction,
+    addTransfer,
     updateTransaction,
     deleteTransaction,
     addAccount,
