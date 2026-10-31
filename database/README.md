@@ -147,7 +147,10 @@ the production baseline, on minimal Supabase stand-ins
 default privileges apply, which is why a new migration must revoke browser grants
 before granting narrowly. `goals.sql` tests the goals migration (access, the
 calculation, snapshots, contributions) and `goals_concurrency.sh` races two real
-sessions to prove the row locks. On macOS, set `LC_ALL=en_US.UTF-8` if the
+sessions to prove the row locks. `transfers.sql` tests linked transfers and account
+balances; `transfers_commit.sh` uses real sessions to prove the transfer pair check
+runs at commit and that concurrent retries and deletes settle on one outcome. The two
+scripts commit rows, so they run last. On macOS, set `LC_ALL=en_US.UTF-8` if the
 server fails with "postmaster became multithreaded".
 
 References: [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security)
