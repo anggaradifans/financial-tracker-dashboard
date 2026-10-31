@@ -1,5 +1,6 @@
 import { Transaction } from '../types/financial'
 import { format } from 'date-fns'
+import { categoryLabel } from './transfers'
 
 /**
  * Export transactions to CSV format
@@ -27,7 +28,7 @@ export const exportToCSV = (
   const rows = transactions.map((tx) => [
     format(new Date(tx.occurred_at), 'yyyy-MM-dd'),
     tx.type,
-    tx.category?.name || 'Uncategorized',
+    categoryLabel(tx),
     tx.account?.name || '',
     tx.amount.toString(),
     tx.currency,

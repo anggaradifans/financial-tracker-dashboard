@@ -109,3 +109,19 @@ test('API authorization failures surface without retrying with another credentia
   await assert.rejects(client.select('transactions'), /403 - Denied/)
   assert.equal(requests.length, 1)
 })
+
+test('a void RPC such as delete_transfer succeeds on an empty or null body and sends its argument', async () => {
+  for (const respond of [() => new Response(null, { status: 204 }), () => new Response(''), () => new Response('null')]) {
+    const { client, requests } = await clientFor({ respond })
+    await client.rpc('delete_transfer', { p_transfer_id: 'transfer-1' })
+    assert.equal(new URL(requests[0].url).pathname.split('/').pop(), 'delete_transfer')
+    assert.deepEqual(JSON.parse(requests[0].body), { p_transfer_id: 'transfer-1' })
+  }
+})
+
+test('an RPC the database refuses reports the failure', async () => {
+  const { client } = await clientFor({
+    respond: () => new Response('{"code":"P0002","message":"Transfer unavailable"}', { status: 404 }),
+  })
+  await assert.rejects(client.rpc('delete_transfer', { p_transfer_id: 'gone' }), /Transfer unavailable/)
+})

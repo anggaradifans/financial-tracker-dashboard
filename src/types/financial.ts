@@ -1,11 +1,20 @@
+// What a person can enter or import.
 export type TransactionType = 'income' | 'outcome'
+// A transfer is stored as two linked legs: a debit and a credit. They are created
+// and deleted only through the create_transfer / delete_transfer RPCs.
+export type TransferLegType = 'transfer_out' | 'transfer_in'
+// What a stored row can be.
+export type StoredTransactionType = TransactionType | TransferLegType
 export type CategoryAllowedType = 'income' | 'outcome' | 'both'
 
 export interface Transaction {
   id: string
   account_id?: string | null
-  category_id: string
-  type: TransactionType
+  // Only transfer legs have no category.
+  category_id: string | null
+  type: StoredTransactionType
+  // Shared by the two legs of one transfer; null for ordinary transactions.
+  transfer_id?: string | null
   amount: number
   currency: string
   description?: string | null

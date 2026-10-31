@@ -6,6 +6,11 @@ export interface ExistingTransactionMatch {
   description?: string | null;
 }
 
+// A statement shows a transfer as an outgoing row on one account and an incoming row on
+// the other, so a recorded transfer leg is the same movement as the matching row.
+const comparableType = (type: string) =>
+  type === 'transfer_out' ? 'outcome' : type === 'transfer_in' ? 'income' : type;
+
 export function markDuplicates<T extends {
   occurred_at: string;
   amount: number;
@@ -24,7 +29,7 @@ export function markDuplicates<T extends {
     const candidateTime = new Date(candidate.occurred_at).getTime();
 
     const matched = existing.find((ex) => {
-      if (ex.type !== candidate.type) return false;
+      if (comparableType(ex.type) !== comparableType(candidate.type)) return false;
       if (Math.abs(ex.amount - candidate.amount) > 0.01) return false;
 
       const exTime = new Date(ex.occurred_at).getTime();

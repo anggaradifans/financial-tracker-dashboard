@@ -32,6 +32,10 @@ for migration in "$migrations_dir"/*.sql; do
   run_sql -U postgres -d migrations_test --single-transaction -f "$migration"
 done
 run_sql -U postgres -d migrations_test -f "$test_dir/goals.sql"
+run_sql -U postgres -d migrations_test -f "$test_dir/transfers.sql"
+run_sql -U postgres -d migrations_test -f "$test_dir/staged_transfers.sql"
+# The scripts below commit rows, so they run last.
 bash "$test_dir/goals_concurrency.sh" "$cluster_dir"
+bash "$test_dir/transfers_commit.sh" "$cluster_dir"
 
 printf 'Local test logs: %s\n' "$cluster_dir"

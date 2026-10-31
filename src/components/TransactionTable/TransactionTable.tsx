@@ -6,6 +6,24 @@ import { TableRowSkeleton } from '../SkeletonLoader'
 import EmptyState from '../EmptyState'
 import ConfirmDialog from '../ConfirmDialog'
 import { Receipt } from 'lucide-react'
+import { amountSign, amountTone, AmountTone, categoryLabel, isTransferType, transferLabel, transferPartner } from '../../utils/transfers'
+
+// Transfers are neutral: moving money between your own accounts is neither income nor spending.
+const badgeToneClass: Record<AmountTone, string> = {
+  positive: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200',
+  negative: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200',
+  neutral: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200',
+}
+const cardAmountToneClass: Record<AmountTone, string> = {
+  positive: 'text-green-600 dark:text-green-400',
+  negative: 'text-red-600 dark:text-red-400',
+  neutral: 'text-gray-700 dark:text-gray-300',
+}
+const rowAmountToneClass: Record<AmountTone, string> = {
+  positive: 'text-green-700 dark:text-green-400',
+  negative: 'text-red-700 dark:text-red-400',
+  neutral: 'text-gray-700 dark:text-gray-300',
+}
 
 interface TransactionTableProps {
   transactions: Transaction[]
@@ -32,9 +50,9 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   categories = [],
   emptyDescription = 'Start tracking your finances by adding your first transaction',
 }) => {
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; description: string } | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; description: string; transfer: boolean } | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [typeFilter, setTypeFilter] = useState<TransactionType | 'all'>('all')
+  const [typeFilter, setTypeFilter] = useState<TransactionType | 'transfer' | 'all'>('all')
   const [accountFilter, setAccountFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<'date' | 'amount'>('date')
@@ -51,6 +69,9 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
     }).format(amount)
   }
 
+  const rowLabel = (tx: Transaction) =>
+    isTransferType(tx.type) ? transferLabel(tx, transferPartner(transactions, tx)?.account?.name) : categoryLabel(tx)
+
   // Filter and sort transactions
   const filteredAndSortedTransactions = useMemo(() => {
     return transactions
@@ -60,7 +81,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
           t.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           t.category?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           t.account?.name.toLowerCase().includes(searchTerm.toLowerCase())
-        const matchesType = typeFilter === 'all' || t.type === typeFilter
+        const matchesType = typeFilter === 'all' || (typeFilter === 'transfer' ? isTransferType(t.type) : t.type === typeFilter)
         const matchesAccount = accountFilter === 'all' || t.account_id === accountFilter
         const matchesCategory = categoryFilter === 'all' || t.category_id === categoryFilter
         return matchesSearch && matchesType && matchesAccount && matchesCategory
@@ -106,6 +127,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
     setDeleteConfirm({
       id: transaction.id,
       description: transaction.description || 'this transaction',
+      transfer: isTransferType(transaction.type),
     })
   }
 
@@ -120,8 +142,10 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
     <>
       <ConfirmDialog
         isOpen={!!deleteConfirm}
-        title="Delete Transaction"
-        message={`Are you sure you want to delete "${deleteConfirm?.description}"? This action cannot be undone.`}
+        title={deleteConfirm?.transfer ? 'Delete Transfer' : 'Delete Transaction'}
+        message={deleteConfirm?.transfer
+          ? `Are you sure you want to delete "${deleteConfirm.description}"? Both sides of the transfer are removed. This action cannot be undone.`
+          : `Are you sure you want to delete "${deleteConfirm?.description}"? This action cannot be undone.`}
         confirmLabel="Delete"
         cancelLabel="Cancel"
         onConfirm={handleDeleteConfirm}
@@ -150,12 +174,13 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             <select
               aria-label="Transaction type"
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as TransactionType | 'all')}
+              onChange={(e) => setTypeFilter(e.target.value as TransactionType | 'transfer' | 'all')}
               className="flex-1 min-w-[110px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
             >
               <option value="all">All Types</option>
               <option value="income">Income</option>
               <option value="outcome">Outcome</option>
+              <option value="transfer">Transfers</option>
             </select>
             <select
               aria-label="Transaction category"
@@ -238,18 +263,14 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      transaction.type === 'income'
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
-                        : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
+                      badgeToneClass[amountTone(transaction.type)]
                     } transition-colors break-words max-w-full`}>
-                      {transaction.category?.name || 'Uncategorized'}
+                      {rowLabel(transaction)}
                     </span>
                     <span className={`text-sm font-bold ${
-                      transaction.type === 'income'
-                        ? 'text-green-600 dark:text-green-400'
-                        : 'text-red-600 dark:text-red-400'
+                      cardAmountToneClass[amountTone(transaction.type)]
                     } transition-colors tabular-nums break-all`}>
-                      {transaction.type === 'income' ? '+' : '-'}
+                      {amountSign(transaction.type)}
                       {formatCurrency(Number(transaction.amount))}
                     </span>
                   </div>
@@ -264,13 +285,15 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                   </div>
                 </div>
                 <div className="flex items-center justify-end gap-2 border-t border-gray-200 dark:border-gray-700 pt-2">
-                  <button
-                    onClick={() => onEdit(transaction)}
-                    className="inline-flex items-center gap-2 px-3 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-md transition-colors"
-                    title="Edit"
-                  >
-                    <Edit className="h-4 w-4" aria-hidden="true" /> Edit
-                  </button>
+                  {!isTransferType(transaction.type) && (
+                    <button
+                      onClick={() => onEdit(transaction)}
+                      className="inline-flex items-center gap-2 px-3 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-md transition-colors"
+                      title="Edit"
+                    >
+                      <Edit className="h-4 w-4" aria-hidden="true" /> Edit
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDeleteClick(transaction)}
                     className="inline-flex items-center gap-2 px-3 text-sm text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
@@ -370,8 +393,12 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                     {format(new Date(transaction.occurred_at), 'MMM dd, yyyy')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 transition-colors">
-                      {transaction.category?.name || 'Uncategorized'}
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      isTransferType(transaction.type)
+                        ? badgeToneClass.neutral
+                        : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200'
+                    } transition-colors`}>
+                      {rowLabel(transaction)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 transition-colors">
@@ -381,26 +408,22 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                     {transaction.description || '—'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right tabular-nums">
-                    <span
-                      className={`text-sm font-semibold ${
-                        transaction.type === 'income'
-                          ? 'text-green-700 dark:text-green-400'
-                          : 'text-red-700 dark:text-red-400'
-                      }`}
-                    >
-                      {transaction.type === 'income' ? '+' : '-'}
+                    <span className={`text-sm font-semibold ${rowAmountToneClass[amountTone(transaction.type)]}`}>
+                      {amountSign(transaction.type)}
                       {formatCurrency(Number(transaction.amount))}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
-                      <button
-                        onClick={() => onEdit(transaction)}
-                        className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-md transition-colors"
-                        title="Edit"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
+                      {!isTransferType(transaction.type) && (
+                        <button
+                          onClick={() => onEdit(transaction)}
+                          className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-md transition-colors"
+                          title="Edit"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDeleteClick(transaction)}
                         className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
