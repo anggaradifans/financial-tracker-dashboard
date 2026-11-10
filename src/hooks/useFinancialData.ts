@@ -69,7 +69,7 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
         is?: Record<string, any>
         order?: string
       } = {
-        select: '*,accounts(*),categories(*)',
+        select: '*,accounts:accounts!transactions_account_owner_fkey(*),categories(*)',
         is: { deleted_at: null },
         order: 'occurred_at.desc',
       }
