@@ -13,19 +13,13 @@ const preview: Preview = {
       },
     },
     backgrounds: {
-      default: 'light',
-      values: [
-        {
-          name: 'light',
-          value: '#ffffff',
-        },
-        {
-          name: 'dark',
-          value: '#111827',
-        },
-      ],
+      options: {
+        light: { name: 'light', value: '#ffffff' },
+        dark: { name: 'dark', value: '#111827' },
+      },
     },
   },
+  initialGlobals: { backgrounds: { value: 'light' } },
   decorators: [
     (Story) => (
       <ThemeProvider>

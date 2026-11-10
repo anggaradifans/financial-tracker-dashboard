@@ -24,20 +24,13 @@ const ForgotPasswordForm: React.FC<ForgotPasswordFormProps> = ({ onSwitchToLogin
     }
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/update-password`,
       })
-
-      if (error) {
-        // For security, we might want to be vague, but for dev/MVP we show the error
-        // Production: setError('If an account exists, a recovery email has been sent.')
-        setError(error.message)
-      } else {
-        setSuccessMessage('Check your email for the password reset link.')
-      }
     } catch {
-      setError('An unexpected error occurred.')
+      // Keep failed and successful requests indistinguishable to callers.
     } finally {
+      setSuccessMessage('If an account exists for this email, a password reset link will be sent.')
       setIsLoading(false)
     }
   }

@@ -104,6 +104,7 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
   const fetchAccounts = async () => {
     try {
       const data = await supabaseRest.select<Account>('accounts', {
+        eq: { user_id: userId },
         order: 'name.asc',
       })
       setAccounts(data || [])
@@ -235,7 +236,7 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
 
   const addAccount = async (name: string, currency: string = 'IDR') => {
     try {
-      const result = await supabaseRest.insert<Account[]>('accounts', { name, currency })
+      const result = await supabaseRest.insert<Account[]>('accounts', { name, currency, user_id: userId })
       const data = Array.isArray(result) ? result[0] : result
 
       if (data) {

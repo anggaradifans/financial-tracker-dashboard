@@ -73,3 +73,6 @@ out
 # Temporary files
 *.tmp
 *.temp
+
+# Storybook static output
+/storybook-static

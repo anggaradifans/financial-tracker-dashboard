@@ -29,6 +29,7 @@ export interface Transaction {
 }
 
 export interface Account {
+  user_id?: string | null
   id: string
   name: string
   currency: string

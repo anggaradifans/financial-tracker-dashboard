@@ -19,3 +19,8 @@ For future schema changes:
 
 The SQL files in the repository root are historical references. They do not
 describe the current database and must not be replayed.
+
+For issue #21's account ownership migration, follow the coordinated rollout and
+data preservation checks in [security-hardening-20261109.md](../database/security-hardening-20261109.md).
+It changes account name uniqueness and requires the companion ingestion changes.
+Unowned historical accounts are retained but hidden until explicitly assigned.

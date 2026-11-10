@@ -1,6 +1,6 @@
 # Storybook Configuration
 
-This project uses Storybook for component development and documentation.
+This project uses Storybook 10 for component development and documentation.
 
 ## Getting Started
 
@@ -28,10 +28,8 @@ This creates a static build of Storybook that can be deployed.
 
 ## Addons Included
 
-- `@storybook/addon-essentials` - Core addons (controls, actions, docs, etc.)
-- `@storybook/addon-interactions` - Test component interactions
-- `@storybook/addon-links` - Link between stories
-- `@storybook/addon-viewport` - Test responsive designs
+- `@storybook/addon-docs` - Component documentation and autodocs
+- Controls, actions, backgrounds and viewport tools are built into Storybook 10.
 
 ## Writing Stories
 

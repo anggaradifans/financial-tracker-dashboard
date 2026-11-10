@@ -2,6 +2,12 @@ import { Transaction } from '../types/financial'
 import { format } from 'date-fns'
 import { categoryLabel } from './transfers'
 
+export const escapeCSVCell = (value: unknown): string => {
+  const text = String(value)
+  const safe = /^[=+\-@\t\r\n]/.test(text) ? `'${text}` : text
+  return `"${safe.replace(/"/g, '""')}"`
+}
+
 /**
  * Export transactions to CSV format
  */
@@ -39,7 +45,7 @@ export const exportToCSV = (
   const csvContent = [
     headers.join(','),
     ...rows.map((row) =>
-      row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+      row.map(escapeCSVCell).join(',')
     ),
   ].join('\n')
 
