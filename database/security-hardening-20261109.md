@@ -81,12 +81,24 @@ backup is a separate incident decision because it could lose writes made afterwa
   refreshed. The Storybook migration follows the
   [official guide](https://storybook.js.org/docs/releases/migration-guide).
 
-The npm audit after compatible fixes reports **12 development-tool advisories**
-(11 moderate, 1 high): Vite/esbuild, glob through Storybook's TypeScript docgen
-plugin, and minimatch through glob/TypeScript ESLint. Resolving these requires
-separate toolchain upgrades or reviewed overrides; no force downgrade/override
-was applied. These advisories remain open, rather than being claimed as fixed.
-`npm audit --omit=dev` reports zero production dependency vulnerabilities.
+The dependency follow-up on November 10, 2026 resolves the remaining 12 audit
+findings. Verification reports zero vulnerabilities in both the full dependency
+tree and production-only dependencies. Vite is updated to 8.3.7 and its React
+plugin to 6.3.0; Storybook's compatible esbuild dependency is updated as well.
+
+Two scoped overrides cover upstream version constraints:
+
+- Storybook React/Vite uses `@joshwooding/vite-plugin-react-docgen-typescript`
+  0.9.1 or later, replacing its vulnerable `glob` dependency with `tinyglobby`.
+- TypeScript ESLint's `typescript-estree` uses `minimatch` 11.0.5 or later, which
+  fixes the glob-parts denial of service. Node 24 satisfies its engine requirement.
+
+These overrides are limited to the affected parent packages. Review and remove
+one when the corresponding upstream package accepts a patched version itself.
+Compatibility checks cover the type-aware ESLint parser's `allowDefaultProject`
+matching, app and Storybook builds, security tests and demo browser flows. The
+upgrade follows the [Vite migration guide](https://vite.dev/guide/migration).
+No Supabase schema or data changes are involved.
 
 ## Verification
 
