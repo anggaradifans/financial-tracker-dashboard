@@ -1,21 +1,20 @@
 import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ArrowLeftRight, Download, Menu, Moon, Plus, Sun, TrendingUp } from 'lucide-react'
+import { ArrowLeftRight, Download, Menu, Moon, Plus, Sun } from 'lucide-react'
 import { useDemoFinancialData } from '../../hooks/useDemoFinancialData'
 import { getDateRangeForPeriod } from '../../hooks/useFinancialData'
 import { Budget, DateRange, PeriodFilter as PeriodFilterType } from '../../types/financial'
 import FinancialSummaryCards from '../FinancialSummaryCards'
-import FinancialCharts from '../FinancialCharts'
+import { SavingsAnalysis } from '../SavingsAnalysis/SavingsAnalysis'
+import { demoTransactions } from '../../data/demoData'
 import TransactionTable from '../TransactionTable'
 import TransactionForm from '../TransactionForm'
 import TransferForm from '../TransferForm'
 import CategoryAccountManager from '../CategoryAccountManager'
-import InsightsSection from '../InsightsSection'
 import PeriodFilter from '../PeriodFilter'
 import BudgetManager from '../BudgetManager'
 import BudgetProgressCards from '../BudgetProgressCards'
 import ToastNotifications from '../ToastNotifications'
-import EmptyState from '../EmptyState'
 import { CardSkeleton } from '../SkeletonLoader'
 import DashboardNavigation, { getDashboardSection } from '../DashboardNavigation/DashboardNavigation'
 import DemoBanner from '../DemoBanner'
@@ -48,8 +47,6 @@ const DemoDashboard: React.FC = () => {
   const data = useDemoFinancialData(dateRange)
   const { transactions, accounts, categories, budgets, loading, error, refresh, addTransaction, addTransfer, updateTransaction, deleteTransaction, addAccount, deleteAccount, addCategory, deleteCategory, addBudget, updateBudget, deleteBudget } = data
   const summary = data.getFinancialSummaryForDateRange(dateRange)
-  const categoryBreakdown = data.getCategoryBreakdown(undefined, dateRange)
-  const timeSeriesData = data.getTimeSeriesData(dateRange)
   const budgetProgress = data.getBudgetProgress(dateRange)
   const details = pageDetails[section]
 
@@ -96,7 +93,7 @@ const DemoDashboard: React.FC = () => {
           {loading ? <div className="grid grid-cols-1 gap-4 md:grid-cols-3" role="status" aria-label="Loading demo financial data"><CardSkeleton /><CardSkeleton /><CardSkeleton /></div> : <>
             {section === 'overview' && <div className="space-y-8"><PeriodFilter period={period} dateRange={dateRange} onPeriodChange={handlePeriodChange} onCustomRangeChange={setCustomRange} /><FinancialSummaryCards summary={summary} currency="IDR" showAmounts={showAmounts} onToggleAmounts={() => setShowAmounts(!showAmounts)} />{budgetProgress.length > 0 && <section aria-labelledby="demo-budget-highlights"><h2 id="demo-budget-highlights" className="mb-4 text-xl font-semibold">Budget highlights</h2><BudgetProgressCards budgetProgress={budgetProgress} currency="IDR" /></section>}<section aria-labelledby="demo-recent-transactions" className="space-y-4"><div className="flex items-end justify-between gap-3"><div><h2 id="demo-recent-transactions" className="text-xl font-semibold">Recent transactions</h2><p className="text-sm text-gray-600 dark:text-gray-400">The five latest sample entries.</p></div><button onClick={() => navigate('/demo/transactions')} className="min-h-11 rounded-md px-3 text-sm font-medium text-primary-700 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-primary-900/30">View all</button></div><TransactionTable transactions={transactions.slice(0, 5)} accounts={accounts} categories={categories} onEdit={openEditTransaction} onDelete={handleDeleteTransaction} currency="IDR" onAddTransaction={openNewTransaction} emptyDescription="No sample transactions in this period. Choose another period to see demo activity." /></section></div>}
             {section === 'transactions' && <div className="space-y-6"><PeriodFilter period={period} dateRange={dateRange} onPeriodChange={handlePeriodChange} onCustomRangeChange={setCustomRange} /><section aria-labelledby="all-demo-transactions" className="space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><h2 id="all-demo-transactions" className="text-xl font-semibold">All sample transactions</h2><div className="flex items-center gap-2"><button onClick={() => setShowTransferForm(true)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-gray-300 dark:border-gray-600 px-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"><ArrowLeftRight className="h-4 w-4" aria-hidden="true" />Add transfer</button><button onClick={handleExport} disabled={transactions.length === 0} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"><Download className="h-4 w-4" aria-hidden="true" />Export CSV</button></div></div><TransactionTable transactions={transactions} accounts={accounts} categories={categories} onEdit={openEditTransaction} onDelete={handleDeleteTransaction} currency="IDR" onAddTransaction={openNewTransaction} emptyDescription="No sample transactions in this period. Choose another period to see demo activity." /></section></div>}
-            {section === 'analytics' && <div className="space-y-8"><PeriodFilter period={period} dateRange={dateRange} onPeriodChange={handlePeriodChange} onCustomRangeChange={setCustomRange} />{timeSeriesData.length > 0 || categoryBreakdown.length > 0 ? <><FinancialCharts timeSeriesData={timeSeriesData} categoryBreakdown={categoryBreakdown} currency="IDR" />{transactions.length > 0 && <InsightsSection transactions={transactions} categoryBreakdown={categoryBreakdown} dateRange={dateRange} currency="IDR" />}</> : <EmptyState icon={TrendingUp} title="No demo analytics in this period" description="Choose another period to explore the sample trends." />}</div>}
+            {section === 'analytics' && <div className="space-y-8"><PeriodFilter period={period} dateRange={dateRange} onPeriodChange={handlePeriodChange} onCustomRangeChange={setCustomRange} /><SavingsAnalysis transactions={demoTransactions} dateRange={dateRange} basePath="/demo" /></div>}
             {section === 'budgets' && <div className="space-y-8">{budgetProgress.length > 0 && <BudgetProgressCards budgetProgress={budgetProgress} currency="IDR" />}<section aria-labelledby="demo-budget-management"><h2 id="demo-budget-management" className="mb-4 text-xl font-semibold">Manage demo budgets</h2><BudgetManager budgets={budgets} categories={categories} onAddBudget={async (budget: Omit<Budget, 'id' | 'created_at' | 'category'>) => { await addBudget(budget); notifications.info('Demo mode: Budget would be saved in real mode') }} onUpdateBudget={async (id, updates) => { await updateBudget(id, updates); notifications.info('Demo mode: Budget would be updated in real mode') }} onDeleteBudget={async id => { await deleteBudget(id); notifications.info('Demo mode: Budget would be deleted in real mode') }} currency="IDR" /></section></div>}
             {section === 'goals' && <section className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800"><h2 className="text-lg font-semibold">Goals are saved to your account</h2><p className="mt-2 max-w-2xl text-sm text-gray-600 dark:text-gray-400">This preview uses sample transactions and does not save goals or contributions. Sign in to create a savings goal and get an emergency fund recommendation from your own completed months.</p></section>}
             {section === 'settings' && <section aria-labelledby="demo-account-settings"><h2 id="demo-account-settings" className="mb-4 text-xl font-semibold">Sample accounts and categories</h2><CategoryAccountManager accounts={accounts} categories={categories} onAddAccount={async (name, currency) => { await addAccount(name, currency); notifications.info('Demo mode: Account would be saved in real mode') }} onDeleteAccount={async id => { await deleteAccount(id); notifications.info('Demo mode: Account would be deleted in real mode') }} onAddCategory={async (name, allowedType) => { await addCategory(name, allowedType); notifications.info('Demo mode: Category would be saved in real mode') }} onDeleteCategory={async id => { await deleteCategory(id); notifications.info('Demo mode: Category would be deleted in real mode') }} /></section>}

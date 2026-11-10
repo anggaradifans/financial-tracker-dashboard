@@ -64,6 +64,16 @@ test('writes and RPC use the user session and cannot override authorization', as
   assert.deepEqual(requests.map(r => r.method), ['POST', 'PATCH', 'DELETE', 'POST', 'GET'])
 })
 
+test('select serializes history pagination bounds, including zero offset', async () => {
+  const { client, requests } = await clientFor()
+  await client.select('transactions', { limit: 500, offset: 0, order: 'occurred_at.asc,id.asc' })
+  await client.select('transactions', { limit: 500, offset: 500 })
+  assert.equal(new URL(requests[0].url).searchParams.get('offset'), '0')
+  assert.equal(new URL(requests[0].url).searchParams.get('limit'), '500')
+  assert.equal(new URL(requests[0].url).searchParams.get('order'), 'occurred_at.asc,id.asc')
+  assert.equal(new URL(requests[1].url).searchParams.get('offset'), '500')
+})
+
 test('each request uses the latest session token', async () => {
   let token = 'first-token'
   const { client, requests } = await clientFor({

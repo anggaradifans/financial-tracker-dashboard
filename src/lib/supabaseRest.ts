@@ -84,6 +84,7 @@ export const supabaseRest = {
       is?: Record<string, any>
       order?: string
       limit?: number
+      offset?: number
     }
   ): Promise<T[]> {
     // PostgREST supports multiple query params with same key (for range queries)
@@ -130,6 +131,9 @@ export const supabaseRest = {
 
     if (query?.limit) {
       url.searchParams.set('limit', query.limit.toString())
+    }
+    if (query?.offset !== undefined) {
+      url.searchParams.set('offset', query.offset.toString())
     }
 
     const response = await fetch(url.toString(), {
