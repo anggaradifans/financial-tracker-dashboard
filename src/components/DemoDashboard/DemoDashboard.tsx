@@ -18,6 +18,7 @@ import ToastNotifications from '../ToastNotifications'
 import { CardSkeleton } from '../SkeletonLoader'
 import DashboardNavigation, { getDashboardSection } from '../DashboardNavigation/DashboardNavigation'
 import DemoBanner from '../DemoBanner'
+import { DemoNetWorth } from '../NetWorth/NetWorth'
 import { exportToCSV, formatExportFilename } from '../../utils/exportUtils'
 import { notifications } from '../../utils/notifications'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -28,6 +29,7 @@ const pageDetails = {
   analytics: { title: 'Analytics', description: 'Explore trends and patterns using sample data.' },
   budgets: { title: 'Budgets', description: 'Explore sample spending limits and progress.' },
   goals: { title: 'Goals', description: 'See how savings goals fit into your financial plan.' },
+  'net-worth': { title: 'Net worth', description: 'Explore a sample balance sheet with property, investments and debt.' },
   settings: { title: 'Settings', description: 'Explore sample accounts and transaction categories.' },
 }
 
@@ -96,6 +98,7 @@ const DemoDashboard: React.FC = () => {
             {section === 'analytics' && <div className="space-y-8"><PeriodFilter period={period} dateRange={dateRange} onPeriodChange={handlePeriodChange} onCustomRangeChange={setCustomRange} /><SavingsAnalysis transactions={demoTransactions} dateRange={dateRange} basePath="/demo" /></div>}
             {section === 'budgets' && <div className="space-y-8">{budgetProgress.length > 0 && <BudgetProgressCards budgetProgress={budgetProgress} currency="IDR" />}<section aria-labelledby="demo-budget-management"><h2 id="demo-budget-management" className="mb-4 text-xl font-semibold">Manage demo budgets</h2><BudgetManager budgets={budgets} categories={categories} onAddBudget={async (budget: Omit<Budget, 'id' | 'created_at' | 'category'>) => { await addBudget(budget); notifications.info('Demo mode: Budget would be saved in real mode') }} onUpdateBudget={async (id, updates) => { await updateBudget(id, updates); notifications.info('Demo mode: Budget would be updated in real mode') }} onDeleteBudget={async id => { await deleteBudget(id); notifications.info('Demo mode: Budget would be deleted in real mode') }} currency="IDR" /></section></div>}
             {section === 'goals' && <section className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800"><h2 className="text-lg font-semibold">Goals are saved to your account</h2><p className="mt-2 max-w-2xl text-sm text-gray-600 dark:text-gray-400">This preview uses sample transactions and does not save goals or contributions. Sign in to create a savings goal and get an emergency fund recommendation from your own completed months.</p></section>}
+            {section === 'net-worth' && <DemoNetWorth />}
             {section === 'settings' && <section aria-labelledby="demo-account-settings"><h2 id="demo-account-settings" className="mb-4 text-xl font-semibold">Sample accounts and categories</h2><CategoryAccountManager accounts={accounts} categories={categories} onAddAccount={async (name, currency) => { await addAccount(name, currency); notifications.info('Demo mode: Account would be saved in real mode') }} onDeleteAccount={async id => { await deleteAccount(id); notifications.info('Demo mode: Account would be deleted in real mode') }} onAddCategory={async (name, allowedType) => { await addCategory(name, allowedType); notifications.info('Demo mode: Category would be saved in real mode') }} onDeleteCategory={async id => { await deleteCategory(id); notifications.info('Demo mode: Category would be deleted in real mode') }} /></section>}
           </>}
         </main>

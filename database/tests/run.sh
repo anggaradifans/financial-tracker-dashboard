@@ -59,5 +59,6 @@ for migration in "$migrations_dir"/*.sql; do
   fi
 done
 run_sql -U postgres -d migrations_test -f "$test_dir/security.sql"
+run_sql -U postgres -d migrations_test -f "$test_dir/wealth.sql"
 
 printf 'Local test logs: %s\n' "$cluster_dir"

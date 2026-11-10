@@ -9,6 +9,7 @@ A personal finance dashboard for recording income and spending, tracking budgets
 - **Transactions.** Add, edit, and delete transactions, then search, sort, and filter them. Export the selected period's transactions to CSV.
 - **Analytics.** Charts of spending over time and by category, plus generated insights.
 - **Budgets.** Set daily, weekly, monthly, or yearly budgets per category and track progress against each.
+- **Net worth.** Record property, investments and debts, link tracked account balances, classify assets, and save dated snapshots. Each currency stays separate. See [net worth setup and behavior](docs/net-worth.md).
 - **Settings.** Manage accounts and categories. Accounts and the default categories are shared. Custom categories are private to whoever created them.
 - **Bank statement import.** Upload a PDF e-statement, including password-protected ones. The text is extracted in the browser. Bank Mandiri and Jenius statements are parsed locally. Other formats are sent as text (never the PDF) to a server-side Gemini function. You review, recategorize, and deduplicate rows before anything is saved.
 - **Public demo.** `/demo` runs the full dashboard on local sample data, with no sign-in.
@@ -76,7 +77,7 @@ The app refuses to start if either Supabase variable is missing. That includes `
 
 ### 3. Prepare the database
 
-**Hosted project:** the schema is already in place, so there is nothing to run. Do not replay any migration against production; see [supabase/README.md](supabase/README.md).
+**Hosted project:** do not replay the production baseline or already-applied migrations. Apply new migrations through the workflow in [supabase/README.md](supabase/README.md). The Net worth feature requires `20261110100000_net_worth.sql` after the existing account-ownership migration; see [rollout notes](docs/net-worth.md#database-contract-and-rollout).
 
 **Local Supabase stack:**
 

@@ -15,6 +15,7 @@ import PeriodFilter from '../PeriodFilter'
 import BudgetManager from '../BudgetManager'
 import BudgetProgressCards from '../BudgetProgressCards'
 import GoalsManager from '../GoalsManager/GoalsManager'
+import NetWorth from '../NetWorth/NetWorth'
 import ToastNotifications from '../ToastNotifications'
 import ConfirmDialog from '../ConfirmDialog'
 import { CardSkeleton } from '../SkeletonLoader'
@@ -30,6 +31,7 @@ const pageDetails = {
   analytics: { title: 'Analytics', description: 'Understand income, spending, and category patterns.' },
   budgets: { title: 'Budgets', description: 'Set spending limits and monitor progress.' },
   goals: { title: 'Goals', description: 'Plan savings targets and track each contribution.' },
+  'net-worth': { title: 'Net worth', description: 'Your assets, liabilities and the value you have built.' },
   settings: { title: 'Settings', description: 'Manage the accounts and categories used in your transactions.' },
 }
 
@@ -115,6 +117,7 @@ const Dashboard: React.FC = () => {
             {section === 'analytics' && <div className="space-y-8"><PeriodFilter period={period} dateRange={dateRange} onPeriodChange={handlePeriodChange} onCustomRangeChange={setCustomRange} /><ConnectedSavingsAnalysis userId={user?.id} dateRange={dateRange} revision={transactions} /></div>}
             {section === 'budgets' && <div className="space-y-8">{budgetProgress.length > 0 && <BudgetProgressCards budgetProgress={budgetProgress} currency="IDR" />}<section aria-labelledby="budget-management"><h2 id="budget-management" className="mb-4 text-xl font-semibold">Manage budgets</h2><BudgetManager budgets={budgets} categories={categories} onAddBudget={async (budget: Omit<Budget, 'id' | 'created_at' | 'category'>) => { await addBudget(budget) }} onUpdateBudget={async (id, updates) => { await updateBudget(id, updates) }} onDeleteBudget={async id => { await deleteBudget(id) }} currency="IDR" /></section></div>}
             {section === 'goals' && <GoalsManager userId={user?.id} categories={categories} />}
+            {section === 'net-worth' && user && <NetWorth key={user.id} userId={user.id} accounts={accounts} />}
             {section === 'settings' && <section aria-labelledby="account-settings"><h2 id="account-settings" className="mb-4 text-xl font-semibold">Accounts and categories</h2><CategoryAccountManager accounts={accounts} categories={categories} onAddAccount={async (name, currency) => { await addAccount(name, currency) }} onDeleteAccount={deleteAccount} onAddCategory={async (name, allowedType) => { await addCategory(name, allowedType) }} onDeleteCategory={deleteCategory} canDeleteCategory={category => !!user && category.user_id === user.id} /></section>}
           </>}
         </main>
