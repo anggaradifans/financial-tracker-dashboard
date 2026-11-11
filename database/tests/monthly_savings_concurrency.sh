@@ -27,7 +27,7 @@ race() {
   sleep 0.5
   local status=0
   sql -c "$second COMMIT;" > "$scratch/second.log" 2>&1 || status=$?
-  if ! wait "$first_pid" || [ "$status" -eq 0 ] || ! rg -q "$expected" "$scratch/second.log"; then
+  if ! wait "$first_pid" || [ "$status" -eq 0 ] || ! grep -Fq "$expected" "$scratch/second.log"; then
     cat "$scratch/first.log" "$scratch/second.log" >&2
     return 1
   fi
