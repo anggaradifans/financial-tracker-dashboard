@@ -55,12 +55,16 @@ for migration in "$migrations_dir"/*.sql; do
     END \$\$;"
     run_sql -d migrations_test -f "$migration"
   else
+    if [[ "$migration" == *20261111110000_goal_types.sql ]]; then
+      run_sql -d migrations_test -f "$test_dir/goal_types_legacy_fixture.sql"
+    fi
     run_sql -d migrations_test --single-transaction -f "$migration"
   fi
 done
 run_sql -d migrations_test -f "$test_dir/security.sql"
 run_sql -d migrations_test -f "$test_dir/wealth.sql"
 run_sql -d migrations_test -f "$test_dir/monthly_savings_allocations.sql"
+run_sql -d migrations_test -f "$test_dir/goal_types.sql"
 bash "$test_dir/monthly_savings_concurrency.sh" "$cluster_dir"
 
 printf 'Local test logs: %s\n' "$cluster_dir"

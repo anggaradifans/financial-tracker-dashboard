@@ -2,7 +2,8 @@ import { useId, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { GoalData } from '../../hooks/useGoals'
 import type { FinancialGoal, GoalPriority, Transaction } from '../../types/financial'
-import { goalPriorityLabels, goalTimeline, maxPlanAmount, previewMonthlyPlan } from '../../utils/monthlySavingsPlan'
+import { forecastGoalTimeline } from '../../utils/goalForecast'
+import { goalPriorityLabels, maxPlanAmount, previewMonthlyPlan, previewSavedMonthlyPlan } from '../../utils/monthlySavingsPlan'
 import { buildSavingsReport } from '../../utils/savings'
 
 export type GoalHistory = { rows: Transaction[]; loading: boolean; error: string | null; loaded: boolean }
@@ -80,9 +81,7 @@ function CurrencyPlan({ currency, goals, data, history, loadHistory, onSaved }: 
   const rows = goals.map(goal => ({ goal, amount: Math.max(0, Number(draft[goal.id].amount) || 0), priority: draft[goal.id].priority }))
   const preview = previewMonthlyPlan(rows, baseline)
   const funding = new Map(preview.rows.map(row => [row.goal.id, row.funded]))
-  const savedPreview = previewMonthlyPlan(goals.map(goal => ({
-    goal, amount: Number(goal.planned_monthly_amount ?? 0), priority: goal.priority ?? 2,
-  })), plan ? Number(plan.baseline_amount) : null)
+  const savedPreview = previewSavedMonthlyPlan(goals, plan ? Number(plan.baseline_amount) : null)
   const valid = baseline !== null && Math.abs(baseline) <= maxPlanAmount && preview.planned <= maxPlanAmount
   const dirty = !plan || baseline !== Number(plan.baseline_amount) ||
     (source === 'history' ? `${month}-01` : null) !== plan.baseline_month ||
@@ -157,13 +156,13 @@ function CurrencyPlan({ currency, goals, data, history, loadHistory, onSaved }: 
         </dl>
       </div>
 
-      <p id={id} className={muted}>Higher priorities are funded first when savings fall short. Within each priority, older goals are funded first. Timelines assume the funded amount stays the same each month.</p>
+      <p id={id} className={muted}>Higher priorities are funded first when savings fall short. Within each priority, older goals are funded first. Timelines assume the funded amount stays the same each month.{goals.some(goal => goal.kind === 'debt_payoff') && ' For debt, the funded amount is the total payment used in this preview.'}</p>
       <ul className="divide-y divide-gray-200 border-y border-gray-200 dark:divide-gray-700 dark:border-gray-700" aria-describedby={id}>
         {savedPreview.rows.map(({ goal, funded: savedFunding }) => {
           const funded = funding.get(goal.id) ?? null
-          const remaining = Number(data.progress[goal.id]?.remaining_amount ?? goal.target_amount)
-          const currentTimeline = goalTimeline(remaining, savedFunding, goal.target_date, today)
-          const previewTimeline = goalTimeline(remaining, funded, goal.target_date, today)
+          const remaining = Number(data.progress[goal.id]?.remaining_amount ?? goal.debt_balance ?? goal.target_amount)
+          const currentTimeline = forecastGoalTimeline(goal, remaining, savedFunding, today)
+          const previewTimeline = forecastGoalTimeline(goal, remaining, funded, today)
           return <li key={goal.id} className="grid min-w-0 gap-3 py-3 lg:grid-cols-[minmax(0,1fr)_minmax(7rem,0.65fr)_minmax(8rem,0.8fr)_minmax(0,1.25fr)] lg:items-start">
             <h3 className="min-w-0 break-words text-sm font-semibold lg:pt-2">{goal.name}</h3>
             <label className="min-w-0 text-sm font-medium">Priority

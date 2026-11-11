@@ -95,7 +95,7 @@ export interface BudgetProgress {
   isOverBudget: boolean
 }
 
-export type GoalKind = 'emergency_fund' | 'custom'
+export type GoalKind = 'emergency_fund' | 'custom' | 'sinking_fund' | 'investment' | 'debt_payoff'
 export type GoalStatus = 'active' | 'completed' | 'archived'
 
 export interface FinancialGoal {
@@ -107,6 +107,11 @@ export interface FinancialGoal {
   currency: string
   target_amount: number
   target_date: string | null
+  investment_market_value: number | null
+  debt_balance: number | null
+  debt_apr: number | null
+  debt_monthly_fee: number | null
+  debt_monthly_payment: number | null
   planned_monthly_amount: number | null
   priority: GoalPriority
   status: GoalStatus
@@ -114,6 +119,9 @@ export interface FinancialGoal {
   created_at: string
   updated_at: string
 }
+
+export type ManualGoalFields = Pick<FinancialGoal, 'name' | 'description' | 'target_amount' | 'target_date'> &
+  Partial<Pick<FinancialGoal, 'investment_market_value' | 'debt_balance' | 'debt_apr' | 'debt_monthly_fee' | 'debt_monthly_payment'>>
 
 export type GoalPriority = 1 | 2 | 3
 
@@ -136,6 +144,7 @@ export interface GoalProgress {
   recommendation_id: string | null
   average_monthly_essential: number | null
   months_of_coverage: number | null
+  repayment_amount: number | null
 }
 
 export interface GoalContribution {

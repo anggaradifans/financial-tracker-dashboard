@@ -22,6 +22,12 @@ export function previewMonthlyPlan<T extends { goal: FinancialGoal; amount: numb
   return { rows, planned: total / 100, balance: available === null ? null : (available - total) / 100 }
 }
 
+export function previewSavedMonthlyPlan(goals: FinancialGoal[], baseline: number | null) {
+  return previewMonthlyPlan(goals.map(goal => ({
+    goal, amount: Number(goal.planned_monthly_amount ?? 0), priority: goal.priority ?? 2,
+  })), baseline)
+}
+
 export function goalTimeline(remaining: number, funded: number | null, targetDate: string | null, today: Date) {
   if (remaining <= 0) return 'Target reached'
   const deadline = targetDate ? new Date(`${targetDate}T00:00:00`) : null

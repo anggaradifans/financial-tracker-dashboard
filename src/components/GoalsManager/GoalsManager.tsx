@@ -4,12 +4,13 @@ import { useGoals } from '../../hooks/useGoals'
 import { Category, EmergencyFundBasis, FinancialGoal } from '../../types/financial'
 import { notifications } from '../../utils/notifications'
 import { loadSavingsHistory } from '../../utils/savingsHistory'
-import { toCents } from '../../utils/monthlySavingsPlan'
+import { goalKindLabels, maxGoalAmount } from '../../utils/goalForecast'
+import { previewSavedMonthlyPlan, toCents } from '../../utils/monthlySavingsPlan'
+import GoalEstimate from './GoalEstimate'
+import ManualGoalForm from './ManualGoalForm'
 import MonthlySavingsPlanner, { allocationMoney, goalField, type GoalHistory } from './MonthlySavingsPlanner'
 
-const money = (amount: number, currency: string) => new Intl.NumberFormat('id-ID', {
-  style: 'currency', currency, maximumFractionDigits: 0,
-}).format(amount)
+const money = allocationMoney
 
 const localDate = () => {
   const now = new Date()
@@ -172,13 +173,10 @@ const RecommendationForm: React.FC<RecommendationFormProps> = ({
 const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
   const data = useGoals(userId)
   const [showEmergencyForm, setShowEmergencyForm] = useState(false)
-  const [showCustomForm, setShowCustomForm] = useState(false)
+  const [showManualForm, setShowManualForm] = useState(false)
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null)
   const [refreshingGoalId, setRefreshingGoalId] = useState<string | null>(null)
   const [busyGoalId, setBusyGoalId] = useState<string | null>(null)
-  const [customName, setCustomName] = useState('')
-  const [customDescription, setCustomDescription] = useState('')
-  const [customTarget, setCustomTarget] = useState('')
-  const [customDate, setCustomDate] = useState('')
   const [emergencyName, setEmergencyName] = useState('Emergency Fund')
   const [emergencyDate, setEmergencyDate] = useState('')
   const [emergencyBalance, setEmergencyBalance] = useState('0')
@@ -205,6 +203,12 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
 
   const activeGoals = useMemo(() => data.goals.filter(goal => goal.status === 'active'), [data.goals])
   const completeGoals = useMemo(() => data.goals.filter(goal => goal.status !== 'active'), [data.goals])
+  const savedFunding = new Map<string, number | null>()
+  for (const currency of new Set(activeGoals.map(goal => goal.currency))) {
+    const plan = data.monthlyPlans[currency]
+    const { rows } = previewSavedMonthlyPlan(activeGoals.filter(goal => goal.currency === currency), plan ? Number(plan.baseline_amount) : null)
+    for (const row of rows) savedFunding.set(row.goal.id, row.funded)
+  }
   const linkedAmounts = useMemo(() => {
     const amounts = new Map<string, number>()
     for (const item of data.contributions) {
@@ -213,17 +217,10 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
     return amounts
   }, [data.contributions])
 
-  const addCustom = async (event: React.FormEvent) => {
+  const addContribution = async (goal: FinancialGoal, event: React.FormEvent) => {
     event.preventDefault()
-    try {
-      await data.addCustomGoal({ name: customName.trim(), description: customDescription.trim() || null, currency: 'IDR', targetAmount: Number(customTarget), targetDate: customDate || null, plannedMonthlyAmount: null })
-      setCustomName(''); setCustomDescription(''); setCustomTarget(''); setCustomDate(''); setShowCustomForm(false)
-      notifications.success('Goal created.')
-    } catch (error) { notifications.error(error instanceof Error ? error.message : 'Could not create goal.') }
-  }
-
-  const addContribution = async (goalId: string, event: React.FormEvent) => {
-    event.preventDefault()
+    const goalId = goal.id
+    const entry = goal.kind === 'debt_payoff' ? 'repayment' : 'contribution'
     const input = contributionInputs[goalId] || { amount: '', date: localDate(), description: '' }
     if (recording[goalId]) return
     if (input.transactionId === '') {
@@ -234,9 +231,19 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
     try {
       await data.addContribution({ goalId, amount: Number(input.amount), contributedOn: input.date || localDate(), description: input.description.trim() || null, transactionId: input.transactionId })
       setContributionInputs(current => ({ ...current, [goalId]: { amount: '', date: localDate(), description: '' } }))
-      notifications.success('Contribution recorded.')
-    } catch (error) { notifications.error(error instanceof Error ? error.message : 'Could not record contribution.') }
+      notifications.success(goal.kind === 'debt_payoff' ? 'Repayment recorded. Update the lender balance from your statement.' : 'Contribution recorded.')
+    } catch (error) { notifications.error(error instanceof Error ? error.message : `Could not record ${entry}.`) }
     finally { setRecording(current => ({ ...current, [goalId]: false })) }
+  }
+
+  const removeContribution = async (id: string, entry: 'repayment' | 'contribution') => {
+    if (!window.confirm(`Remove this ${entry} from the goal?`)) return
+    try {
+      await data.deleteContribution(id)
+      notifications.success(entry === 'repayment' ? 'Repayment removed.' : 'Contribution removed.')
+    } catch (error) {
+      notifications.error(error instanceof Error ? error.message : `Could not remove ${entry}.`)
+    }
   }
 
   const setStatus = async (goal: FinancialGoal, status: 'completed' | 'archived') => {
@@ -254,21 +261,18 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
   return (
     <div className="space-y-6">
       <section className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-        <div><h2 className="text-lg font-semibold">Save toward what matters</h2><p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Track your targets and record deposits or withdrawals as they happen.</p></div>
+        <div><h2 className="text-lg font-semibold">Financial goals</h2><p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Track savings, investment contributions, and debt payoff.</p></div>
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={() => { setShowEmergencyForm(open => !open); setShowCustomForm(false) }} disabled={activeGoals.some(goal => goal.kind === 'emergency_fund')} className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white hover:bg-primary-700 active:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"><Target className="h-4 w-4" aria-hidden="true" />{activeGoals.some(goal => goal.kind === 'emergency_fund') ? 'Emergency fund active' : 'Set up emergency fund'}</button>
-          <button type="button" onClick={() => { setShowCustomForm(open => !open); setShowEmergencyForm(false) }} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-gray-300 px-4 text-sm font-semibold text-gray-800 hover:bg-gray-100 active:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-gray-600 dark:text-gray-100 dark:hover:bg-gray-700"><Plus className="h-4 w-4" aria-hidden="true" />Custom goal</button>
+          <button type="button" onClick={() => { setShowEmergencyForm(open => !open); setShowManualForm(false) }} disabled={activeGoals.some(goal => goal.kind === 'emergency_fund')} className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white hover:bg-primary-700 active:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"><Target className="h-4 w-4" aria-hidden="true" />{activeGoals.some(goal => goal.kind === 'emergency_fund') ? 'Emergency fund active' : 'Set up emergency fund'}</button>
+          <button type="button" aria-expanded={showManualForm} onClick={() => { setShowManualForm(open => !open); setShowEmergencyForm(false) }} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-md border border-gray-500 px-4 text-sm font-semibold text-gray-800 hover:bg-gray-100 active:bg-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:border-gray-400 dark:text-gray-100 dark:hover:bg-gray-700 dark:focus-visible:outline-primary-400"><Plus className="h-4 w-4" aria-hidden="true" />New goal</button>
         </div>
       </section>
 
-      {showCustomForm && <form onSubmit={addCustom} className="grid gap-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 sm:grid-cols-2 sm:p-5">
-        <h2 className="text-lg font-semibold sm:col-span-2">Create a custom goal</h2>
-        <label className="text-sm font-medium">Goal name<input required maxLength={80} value={customName} onChange={event => setCustomName(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /></label>
-        <label className="text-sm font-medium">Target amount (IDR)<input required type="number" min="0.01" step="0.01" value={customTarget} onChange={event => setCustomTarget(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /></label>
-        <label className="text-sm font-medium">Target date (optional)<input type="date" value={customDate} onChange={event => setCustomDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /></label>
-        <label className="text-sm font-medium sm:col-span-2">Description (optional)<input maxLength={500} value={customDescription} onChange={event => setCustomDescription(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /></label>
-        <div className="flex flex-wrap gap-2 sm:col-span-2"><button type="submit" className="min-h-11 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">Create goal</button><button type="button" onClick={() => setShowCustomForm(false)} className="min-h-11 rounded-md border border-gray-300 px-4 text-sm font-semibold hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-gray-600 dark:hover:bg-gray-700">Cancel</button></div>
-      </form>}
+      {showManualForm && <ManualGoalForm onCancel={() => setShowManualForm(false)} onSave={async fields => {
+        await data.addManualGoal(fields)
+        setShowManualForm(false)
+        notifications.success('Goal created.')
+      }} />}
 
       {showEmergencyForm && <div className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 sm:p-5">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -284,16 +288,23 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
         }} />
       </div>}
 
-      {activeGoals.length === 0 && !showEmergencyForm && !showCustomForm && <div className="rounded-xl border border-dashed border-gray-300 bg-white px-5 py-10 text-center dark:border-gray-700 dark:bg-gray-800"><Target className="mx-auto h-8 w-8 text-gray-500" aria-hidden="true" /><h2 className="mt-3 text-lg font-semibold">No active goals yet</h2><p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Set an emergency fund target from your spending history or create a custom goal.</p></div>}
+      {activeGoals.length === 0 && !showEmergencyForm && !showManualForm && <div className="rounded-xl border border-dashed border-gray-300 bg-white px-5 py-10 text-center dark:border-gray-700 dark:bg-gray-800"><Target className="mx-auto h-8 w-8 text-gray-500" aria-hidden="true" /><h2 className="mt-3 text-lg font-semibold">No active goals yet</h2><p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Create a goal to set a target and track your progress.</p></div>}
       {activeGoals.length > 0 && <MonthlySavingsPlanner goals={activeGoals} data={data} history={history} loadHistory={loadHistory}
         onSaved={() => notifications.success('Monthly savings plan saved.')} />}
 
       {activeGoals.map(goal => {
         const stats = data.progress[goal.id]
         const rec = data.recommendations[goal.id]
+        const debt = goal.kind === 'debt_payoff'
+        const investment = goal.kind === 'investment'
+        const extended = debt || investment || goal.kind === 'sinking_fund'
+        const remaining = Number(stats?.remaining_amount ?? goal.debt_balance ?? goal.target_amount)
+        const percent = Number(stats?.progress_percent ?? 0)
+        const progress = Math.min(100, Math.max(0, percent))
+        const activityLabel = debt ? 'repayment' : 'contribution'
         const goalContributions = data.contributions.filter(item => item.goal_id === goal.id)
         const input = contributionInputs[goal.id] || { amount: '', date: localDate(), description: '' }
-        const linkEnabled = input.transactionId !== undefined
+        const linkEnabled = !debt && input.transactionId !== undefined
         const linkedToGoal = new Set(goalContributions.map(item => item.transaction_id))
         const linkable = linkEnabled ? history.rows.filter(tx => tx.currency === goal.currency && !tx.deleted_at &&
           (tx.type === 'income' || tx.type === 'outcome') && !linkedToGoal.has(tx.id) &&
@@ -304,38 +315,58 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
           setContributionInputs(current => ({ ...current, [goal.id]: { ...input, ...change } }))
         const monthlySaving = monthlySavingsNeeded(goal.target_amount, Number(stats?.saved_amount || 0), goal.target_date)
         return <article key={goal.id} className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 sm:p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-semibold">{goal.name}</h2><span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium capitalize text-gray-700 dark:bg-gray-700 dark:text-gray-200">{goal.kind === 'emergency_fund' ? 'Emergency fund' : 'Custom goal'}</span></div>{goal.description && <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{goal.description}</p>}</div><div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0 break-words"><div className="flex flex-wrap items-center gap-2"><h2 className="min-w-0 text-lg font-semibold">{goal.name}</h2><span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200">{goalKindLabels[goal.kind]}</span></div>{goal.description && <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{goal.description}</p>}</div><div className="flex flex-wrap gap-2">
             {goal.kind === 'emergency_fund' && <button type="button" onClick={() => setRefreshingGoalId(current => current === goal.id ? null : goal.id)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-gray-300 px-3 text-sm font-semibold hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-gray-600 dark:hover:bg-gray-700"><RefreshCw className="h-4 w-4" aria-hidden="true" />Review target</button>}
+            {goal.kind !== 'emergency_fund' && <button type="button" aria-expanded={editingGoalId === goal.id}
+              onClick={() => setEditingGoalId(current => current === goal.id ? null : goal.id)}
+              className="min-h-11 cursor-pointer rounded-md border border-gray-500 px-3 text-sm font-semibold hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:border-gray-400 dark:hover:bg-gray-700 dark:focus-visible:outline-primary-400">Edit goal</button>}
             <button type="button" disabled={busyGoalId === goal.id} onClick={() => void setStatus(goal, 'completed')} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-gray-300 px-3 text-sm font-semibold hover:bg-gray-100 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-gray-600 dark:hover:bg-gray-700"><Check className="h-4 w-4" aria-hidden="true" />Mark complete</button>
             <button type="button" disabled={busyGoalId === goal.id} onClick={() => void setStatus(goal, 'archived')} aria-label={`Archive ${goal.name}`} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-gray-300 px-3 text-sm font-semibold hover:bg-gray-100 disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-gray-600 dark:hover:bg-gray-700"><Archive className="h-4 w-4" aria-hidden="true" /><span className="hidden sm:inline">Archive</span></button>
           </div></div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            <div><p className="text-sm text-gray-600 dark:text-gray-400">Saved</p><p className="mt-1 text-lg font-semibold">{money(Number(stats?.saved_amount || 0), goal.currency)}</p></div>
-            <div><p className="text-sm text-gray-600 dark:text-gray-400">Target</p><p className="mt-1 text-lg font-semibold">{money(goal.target_amount, goal.currency)}</p></div>
-            <div><p className="text-sm text-gray-600 dark:text-gray-400">Remaining</p><p className="mt-1 text-lg font-semibold">{money(Number(stats?.remaining_amount ?? goal.target_amount), goal.currency)}</p></div>
+          {editingGoalId === goal.id && <div className="mt-4"><ManualGoalForm goal={goal}
+            onCancel={() => setEditingGoalId(null)} onSave={async ({ kind: _kind, currency: _currency, ...fields }, expectedUpdatedAt) => {
+              await data.updateGoal(goal.id, fields, expectedUpdatedAt)
+              setEditingGoalId(null)
+              notifications.success('Goal updated.')
+            }} /></div>}
+          <div className="mt-5 grid gap-3 break-words sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <div><p className="text-sm text-gray-600 dark:text-gray-400">{debt ? 'Principal reduced' : investment ? 'Net contributions' : 'Saved'}</p><p className="mt-1 text-lg font-semibold">{money(Number(stats?.saved_amount || 0), goal.currency)}</p></div>
+            <div><p className="text-sm text-gray-600 dark:text-gray-400">{debt ? 'Opening debt balance' : investment ? 'Contribution target' : 'Target'}</p><p className="mt-1 text-lg font-semibold">{money(goal.target_amount, goal.currency)}</p></div>
+            <div><p className="text-sm text-gray-600 dark:text-gray-400">{debt ? 'Latest lender balance' : 'Remaining'}</p><p className="mt-1 text-lg font-semibold">{money(remaining, goal.currency)}</p></div>
             <div><p className="text-sm text-gray-600 dark:text-gray-400">{stats?.months_of_coverage != null ? 'Months of essential coverage' : 'Target date'}</p><p className="mt-1 text-lg font-semibold">{stats?.months_of_coverage != null ? `${stats.months_of_coverage} months` : goal.target_date || 'Not set'}</p></div>
             {goal.kind === 'emergency_fund' && <div><p className="text-sm text-gray-600 dark:text-gray-400">Monthly amount needed for target</p><p className="mt-1 text-lg font-semibold">{goal.target_date ? (monthlySaving === null ? 'Choose a future date' : money(monthlySaving, goal.currency)) : 'Add a target date'}</p></div>}
+            {debt && <div><p className="text-sm text-gray-600 dark:text-gray-400">Recorded repayments</p><p className="mt-1 text-lg font-semibold">{money(Number(stats?.repayment_amount ?? 0), goal.currency)}</p></div>}
+            {investment && <div><p className="text-sm text-gray-600 dark:text-gray-400">Reported market value</p><p className="mt-1 text-lg font-semibold">{goal.investment_market_value == null ? 'Not entered' : money(goal.investment_market_value, goal.currency)}</p></div>}
           </div>
-          <div className="mt-4" aria-label={`${stats?.progress_percent || 0}% of target saved`}><div className="mb-1 flex justify-between text-sm"><span>Progress</span><span>{Number(stats?.progress_percent || 0).toFixed(1)}%</span></div><div className="h-2.5 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"><div className="h-full rounded-full bg-primary-600 dark:bg-primary-400" style={{ width: `${Math.min(100, Math.max(0, Number(stats?.progress_percent || 0)))}%` }} /></div></div>
+          <div className="mt-4">
+            <div className="mb-1 flex justify-between text-sm"><span>Progress</span><span>{percent.toFixed(1)}%</span></div>
+            <div role="progressbar" aria-label={`${goal.name} progress`} aria-valuenow={progress} aria-valuetext={`${percent.toFixed(1)}%`}
+              className="h-2.5 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+              <div className="h-full rounded-full bg-primary-600 dark:bg-primary-400" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+          {debt && <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Progress comes from the latest lender balance. Recorded repayments can include interest and fees.</p>}
+          {investment && <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">Only deposits and withdrawals count toward your contribution target. Market gains and losses affect the reported value separately.</p>}
+          {extended && <GoalEstimate goal={goal} remaining={remaining} funded={savedFunding.get(goal.id) ?? null} today={new Date()} />}
           {goal.kind === 'emergency_fund' && rec && <div className="mt-3 text-sm text-gray-600 dark:text-gray-400"><p>Recommendation based on {rec.included_month_count} of {rec.basis_months} months · {money(rec.average_monthly_essential, goal.currency)} average essential spend/month · saved {rec.period_start}–{rec.period_end}.</p><details className="mt-2"><summary className="inline-flex min-h-11 cursor-pointer items-center gap-2 font-semibold text-primary-700 dark:text-primary-300">Saved category basis <ChevronDown className="h-4 w-4" aria-hidden="true" /></summary><ul className="mt-1 grid gap-x-6 sm:grid-cols-2">{(data.recommendationCategories[goal.id] || []).map(category => <li key={category.category_id || category.category_name} className="flex justify-between gap-3 py-1"><span>{category.included ? 'Included' : 'Excluded'} · {category.category_name}</span><span>{money(category.avg_monthly_amount, goal.currency)}/mo</span></li>)}</ul></details></div>}
           {refreshingGoalId === goal.id && goal.kind === 'emergency_fund' && rec && <RecommendationForm key={`${goal.id}-${rec.id}`} categories={categories} initialMonths={rec.basis_months} initialMultiplier={rec.multiplier} initialSelected={(data.recommendationCategories[goal.id] || []).filter(item => item.included && item.category_id).map(item => item.category_id!)} initialPeriodStart={rec.period_start} targetDate={goal.target_date} startingBalance={Number(stats?.saved_amount || 0)} onPreview={(months, ids, multiplier, periodStart) => data.previewEmergencyFund(months, ids, multiplier, goal.currency, periodStart)} actionLabel="Review recommendation for the same saved period" onAccept={async (preview, override, ids, months, multiplier) => {
             await data.acceptRecommendation(goal.id, { basisMonths: months, categoryIds: ids, multiplier, expectedAverage: preview.average_monthly_essential!, targetOverride: override, periodStart: preview.period_start })
             setRefreshingGoalId(null); notifications.success('Recommendation snapshot updated.')
           }} />}
           <details className="mt-4 rounded-lg border border-gray-200 px-4 dark:border-gray-700">
-            <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-3 text-sm font-semibold"><span>Record contribution</span><ChevronDown className="h-4 w-4" aria-hidden="true" /></summary>
-            <form onSubmit={event => void addContribution(goal.id, event)} className="grid gap-3 pb-4 sm:grid-cols-2 lg:grid-cols-4">
-              <label className="text-sm font-medium">Amount ({goal.currency})<input required type="number" step="0.01" value={input.amount} onChange={event => setContributionInputs(current => ({ ...current, [goal.id]: { ...input, amount: event.target.value } }))} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /><span className="mt-1 block text-xs font-normal text-gray-600 dark:text-gray-400">Use a negative amount for a withdrawal.</span></label>
+            <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-3 text-sm font-semibold"><span>{debt ? 'Record repayment' : 'Record contribution'}</span><ChevronDown className="h-4 w-4" aria-hidden="true" /></summary>
+            <form onSubmit={event => void addContribution(goal, event)} className="grid gap-3 pb-4 sm:grid-cols-2 lg:grid-cols-4">
+              <label className="text-sm font-medium">Amount ({goal.currency})<input required type="number" step="0.01" min={debt ? '0.01' : extended ? -maxGoalAmount : undefined} max={extended ? maxGoalAmount : undefined} value={input.amount} onChange={event => updateInput({ amount: event.target.value })} className={goalField} />{!debt && <span className="mt-1 block text-xs font-normal text-gray-600 dark:text-gray-400">Use a negative amount for a withdrawal.</span>}</label>
               <label className="text-sm font-medium">Date<input required type="date" value={input.date} onChange={event => setContributionInputs(current => ({ ...current, [goal.id]: { ...input, date: event.target.value } }))} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /></label>
               <label className="text-sm font-medium">Note<input maxLength={200} value={input.description} onChange={event => setContributionInputs(current => ({ ...current, [goal.id]: { ...input, description: event.target.value } }))} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /></label>
-              <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium sm:col-span-2">
+              {!debt && <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium sm:col-span-2">
                 <input type="checkbox" checked={linkEnabled} className="h-4 w-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
                   onChange={event => {
                     updateInput({ transactionId: event.target.checked ? '' : undefined })
                     if (event.target.checked && !history.loaded) loadHistory()
                   }} />
                 Link a cash-flow transaction
-              </label>
+              </label>}
               {linkEnabled && <div className="min-w-0 sm:col-span-2 lg:col-span-3">
                 <label className="block text-sm font-medium">Transaction for {goal.name}
                   <select required className={`${goalField} cursor-pointer`} value={input.transactionId}
@@ -356,12 +387,12 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
               </div>}
               <button type="submit" disabled={recording[goal.id] || (linkEnabled && (available === null || Math.abs(Number(input.amount)) > available))}
                 className="min-h-11 cursor-pointer self-end rounded-md bg-primary-700 px-4 text-sm font-semibold text-white hover:bg-blue-800 active:bg-primary-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:outline-primary-400">
-                {recording[goal.id] ? 'Recording…' : 'Add contribution'}
+                {recording[goal.id] ? 'Recording…' : debt ? 'Add repayment' : 'Add contribution'}
               </button>
             </form>
-            <button type="button" onClick={() => setContributionInputs(current => ({ ...current, [goal.id]: { ...input, amount: input.amount.startsWith('-') ? input.amount.slice(1) : `-${input.amount}` } }))} className="mb-4 min-h-11 text-sm font-semibold text-primary-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-300">Enter a negative amount for a withdrawal</button>
+            {!debt && <button type="button" onClick={() => updateInput({ amount: input.amount.startsWith('-') ? input.amount.slice(1) : `-${input.amount}` })} className="mb-4 min-h-11 text-sm font-semibold text-primary-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-300">Enter a negative amount for a withdrawal</button>}
           </details>
-          {goalContributions.length > 0 && <details className="mt-3 rounded-lg border border-gray-200 px-4 dark:border-gray-700"><summary className="flex min-h-12 cursor-pointer items-center justify-between text-sm font-semibold">Recent activity ({goalContributions.length})<ChevronDown className="h-4 w-4" aria-hidden="true" /></summary><div className="pb-3">{goalContributions.slice(0, 5).map(item => <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 py-2 text-sm dark:border-gray-700"><span>{item.contributed_on}{item.description ? ` · ${item.description}` : ''}{item.transaction_id && ' · Linked transaction'}</span><span className="flex items-center gap-2"><span className={item.amount < 0 ? 'text-red-700 dark:text-red-300' : 'text-gray-900 dark:text-white'}>{item.amount < 0 ? '−' : '+'}{money(Math.abs(Number(item.amount)), goal.currency)}</span><button type="button" onClick={() => { if (window.confirm('Remove this contribution from the goal?')) void data.deleteContribution(item.id).then(() => notifications.success('Contribution removed.')).catch(error => notifications.error(error instanceof Error ? error.message : 'Could not remove contribution.')) }} aria-label="Remove contribution" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-red-300"><Trash2 className="h-4 w-4" aria-hidden="true" /></button></span></div>)}</div></details>}
+          {goalContributions.length > 0 && <details className="mt-3 rounded-lg border border-gray-200 px-4 dark:border-gray-700"><summary className="flex min-h-12 cursor-pointer items-center justify-between text-sm font-semibold">Recent activity ({goalContributions.length})<ChevronDown className="h-4 w-4" aria-hidden="true" /></summary><div className="pb-3">{goalContributions.slice(0, 5).map(item => <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 py-2 text-sm dark:border-gray-700"><span className="min-w-0 break-words">{item.contributed_on}{item.description ? ` · ${item.description}` : ''}{item.transaction_id && ' · Linked transaction'}</span><span className="flex items-center gap-2"><span className={item.amount < 0 ? 'text-red-700 dark:text-red-300' : 'text-gray-900 dark:text-white'}>{item.amount < 0 ? '−' : '+'}{money(Math.abs(Number(item.amount)), goal.currency)}</span><button type="button" onClick={() => void removeContribution(item.id, activityLabel)} aria-label={`Remove ${activityLabel}`} className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-red-300"><Trash2 className="h-4 w-4" aria-hidden="true" /></button></span></div>)}</div></details>}
         </article>
       })}
 

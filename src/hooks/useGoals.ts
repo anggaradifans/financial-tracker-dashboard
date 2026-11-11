@@ -5,9 +5,11 @@ import {
   FinancialGoal,
   GoalBasisCategory,
   GoalContribution,
+  GoalKind,
   GoalProgress,
   GoalPriority,
   GoalRecommendation,
+  ManualGoalFields,
   MonthlySavingsPlan,
 } from '../types/financial'
 
@@ -55,7 +57,7 @@ export interface GoalData {
     targetOverride: number | null
     periodStart: string | null
   }) => Promise<void>
-  addCustomGoal: (input: { name: string; description: string | null; currency: string; targetAmount: number; targetDate: string | null; plannedMonthlyAmount: number | null }) => Promise<void>
+  addManualGoal: (input: ManualGoalFields & { kind: Exclude<GoalKind, 'emergency_fund'>; currency: string }) => Promise<void>
   addContribution: (input: { goalId: string; amount: number; contributedOn: string; description: string | null; transactionId?: string }) => Promise<void>
   saveMonthlyPlan: (input: {
     currency: string
@@ -65,7 +67,7 @@ export interface GoalData {
     allocations: { goal_id: string; expected_updated_at: string; amount: number; priority: GoalPriority }[]
   }) => Promise<void>
   deleteContribution: (contributionId: string) => Promise<void>
-  updateGoal: (goalId: string, changes: Record<string, unknown>) => Promise<void>
+  updateGoal: (goalId: string, changes: Record<string, unknown>, expectedUpdatedAt?: string) => Promise<void>
   deleteGoal: (goalId: string) => Promise<void>
 }
 
@@ -182,12 +184,8 @@ export const useGoals = (userId: string | undefined): GoalData => {
     await refresh()
   }
 
-  const addCustomGoal: GoalData['addCustomGoal'] = async input => {
-    await supabaseRest.insert('goals', {
-      kind: 'custom', name: input.name, description: input.description, currency: input.currency,
-      target_amount: input.targetAmount, target_date: input.targetDate,
-      planned_monthly_amount: input.plannedMonthlyAmount,
-    })
+  const addManualGoal: GoalData['addManualGoal'] = async input => {
+    await supabaseRest.insert('goals', input)
     await refresh()
   }
 
@@ -215,8 +213,10 @@ export const useGoals = (userId: string | undefined): GoalData => {
     await refresh(false)
   }
 
-  const updateGoal: GoalData['updateGoal'] = async (goalId, changes) => {
-    await supabaseRest.update('goals', changes, { id: goalId, user_id: userId })
+  const updateGoal: GoalData['updateGoal'] = async (goalId, changes, expectedUpdatedAt) => {
+    await supabaseRest.update('goals', changes, {
+      id: goalId, user_id: userId, ...(expectedUpdatedAt && { updated_at: expectedUpdatedAt }),
+    })
     await refresh()
   }
 
@@ -225,5 +225,5 @@ export const useGoals = (userId: string | undefined): GoalData => {
     await refresh()
   }
 
-  return { goals, progress, contributions, monthlyPlans, recommendations, recommendationCategories, loading, error, refresh, previewEmergencyFund, createEmergencyFund, acceptRecommendation, addCustomGoal, addContribution, saveMonthlyPlan, deleteContribution, updateGoal, deleteGoal }
+  return { goals, progress, contributions, monthlyPlans, recommendations, recommendationCategories, loading, error, refresh, previewEmergencyFund, createEmergencyFund, acceptRecommendation, addManualGoal, addContribution, saveMonthlyPlan, deleteContribution, updateGoal, deleteGoal }
 }
