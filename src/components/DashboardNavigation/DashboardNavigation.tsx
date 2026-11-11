@@ -23,6 +23,7 @@ const sections: Array<{ id: DashboardSection; label: string; Icon: React.Element
 export const getDashboardSection = (pathname: string, basePath: '/dashboard' | '/demo'): DashboardSection => {
   const segment = pathname.replace(`${basePath}/`, '').replace(/\/$/, '')
   if (segment === 'analytics/spending' || segment === 'analytics/savings-preview') return 'analytics'
+  if (basePath === '/dashboard' && segment === 'goals/financial-freedom') return 'goals'
   return sections.some(section => section.id === segment) ? segment as DashboardSection : 'overview'
 }
 

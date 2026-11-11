@@ -3,13 +3,18 @@ import { supabaseRest } from '../lib/supabaseRest'
 import { FinancialGoal } from '../types/financial'
 import { CurrentWealthEntry, WealthEntry, WealthSaveInput, WealthSnapshot, WealthValuation } from '../types/wealth'
 
-async function allRows<T>(table: string, userId: string, order: string): Promise<T[]> {
+async function allRows<T>(table: string, userId: string, order: string, filter?: { currency: string; archived: boolean }): Promise<T[]> {
   const rows: T[] = []
   for (let offset = 0; ; offset += 500) {
-    const page = await supabaseRest.select<T>(table, { select: '*', eq: { user_id: userId }, order, limit: 500, offset })
+    const page = await supabaseRest.select<T>(table, { select: '*', eq: { user_id: userId, ...filter }, order, limit: 500, offset })
     rows.push(...page)
     if (page.length < 500) return rows
   }
+}
+
+export function loadCurrentWealth(userId: string, currency?: string) {
+  return allRows<CurrentWealthEntry>('wealth_current', userId, 'name.asc,id.asc',
+    currency ? { currency, archived: false } : undefined)
 }
 
 export function useNetWorth(userId: string) {
@@ -28,7 +33,7 @@ export function useNetWorth(userId: string) {
     setError(null)
     try {
       const [current, entryRows, history, snapshotRows, goalRows] = await Promise.all([
-        allRows<CurrentWealthEntry>('wealth_current', userId, 'name.asc,id.asc'),
+        loadCurrentWealth(userId),
         allRows<WealthEntry>('wealth_entries', userId, 'name.asc,id.asc'),
         allRows<WealthValuation>('wealth_valuations', userId, 'recorded_at.desc,id.desc'),
         supabaseRest.select<WealthSnapshot>('wealth_snapshots', { select: '*', eq: { user_id: userId }, order: 'captured_at.desc,id.desc', limit: 50 }),

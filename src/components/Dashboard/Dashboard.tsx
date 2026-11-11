@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useSpendingDrafts } from '../../hooks/useSpendingDrafts'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeftRight, Download, LogOut, Menu, Moon, Plus, Sun, Upload } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useFinancialData, getDateRangeForPeriod } from '../../hooks/useFinancialData'
@@ -17,6 +17,7 @@ import PeriodFilter from '../PeriodFilter'
 import BudgetManager from '../BudgetManager'
 import BudgetProgressCards from '../BudgetProgressCards'
 import GoalsManager from '../GoalsManager/GoalsManager'
+import FinancialFreedom from '../FinancialFreedom/FinancialFreedom'
 import NetWorth from '../NetWorth/NetWorth'
 import ToastNotifications from '../ToastNotifications'
 import ConfirmDialog from '../ConfirmDialog'
@@ -36,6 +37,8 @@ const pageDetails = {
   'net-worth': { title: 'Net worth', description: 'Your assets, liabilities and the value you have built.' },
   settings: { title: 'Settings', description: 'Manage the accounts and categories used in your transactions.' },
 }
+
+const freedomPath = '/dashboard/goals/financial-freedom'
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate()
@@ -59,7 +62,10 @@ const Dashboard: React.FC = () => {
   const { transactions, accounts, categories, budgets, loading, error, refresh, addTransaction, addTransfer, updateTransaction, deleteTransaction, addAccount, deleteAccount, addCategory, deleteCategory, addBudget, updateBudget, deleteBudget } = data
   const summary = data.getFinancialSummaryForDateRange(dateRange)
   const budgetProgress = data.getBudgetProgress(dateRange)
-  const details = pageDetails[section]
+  const isFreedom = location.pathname.replace(/\/$/, '') === freedomPath
+  const details = isFreedom
+    ? { title: 'Financial freedom', description: 'Estimate the capital you need and compare paths to your target.' }
+    : pageDetails[section]
 
   const setCustomRange = (start: Date, end: Date) => { setPeriod('custom'); setDateRange({ start, end }) }
   const handlePeriodChange = (next: PeriodFilterType) => { setPeriod(next); if (next !== 'custom') setDateRange(getDateRangeForPeriod(next)) }
@@ -124,7 +130,22 @@ const Dashboard: React.FC = () => {
               <ConnectedSavingsAnalysis userId={user?.id} dateRange={dateRange} revision={transactions} spendingDrafts={spendingDrafts} view={analyticsView} />
             </div>}
             {section === 'budgets' && <div className="space-y-8">{budgetProgress.length > 0 && <BudgetProgressCards budgetProgress={budgetProgress} currency="IDR" />}<section aria-labelledby="budget-management"><h2 id="budget-management" className="mb-4 text-xl font-semibold">Manage budgets</h2><BudgetManager budgets={budgets} categories={categories} onAddBudget={async (budget: Omit<Budget, 'id' | 'created_at' | 'category'>) => { await addBudget(budget) }} onUpdateBudget={async (id, updates) => { await updateBudget(id, updates) }} onDeleteBudget={async id => { await deleteBudget(id) }} currency="IDR" /></section></div>}
-            {section === 'goals' && <GoalsManager key={user?.id} userId={user?.id} categories={categories} />}
+            {section === 'goals' && <div className="space-y-6">
+              <nav aria-label="Goals subsections" className="flex flex-wrap gap-x-2 border-b border-gray-200 dark:border-gray-700">
+                {[
+                  { to: '/dashboard/goals', label: 'Savings goals' },
+                  { to: freedomPath, label: 'Financial freedom' },
+                ].map(({ to, label }) => <NavLink key={to} end to={to}
+                  className={({ isActive }) => `inline-flex min-h-11 items-center border-b-2 px-3 text-sm font-medium ${isActive
+                    ? 'border-primary-600 text-primary-700 dark:border-primary-400 dark:text-blue-300'
+                    : 'border-transparent text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'}`}>
+                  {label}
+                </NavLink>)}
+              </nav>
+              {isFreedom && user
+                ? <FinancialFreedom userId={user.id} currencies={accounts.map(account => account.currency)} />
+                : <GoalsManager key={user?.id} userId={user?.id} categories={categories} />}
+            </div>}
             {section === 'net-worth' && user && <NetWorth key={user.id} userId={user.id} accounts={accounts} />}
             {section === 'settings' && <section aria-labelledby="account-settings"><h2 id="account-settings" className="mb-4 text-xl font-semibold">Accounts and categories</h2><CategoryAccountManager accounts={accounts} categories={categories} onAddAccount={async (name, currency) => { await addAccount(name, currency) }} onDeleteAccount={deleteAccount} onAddCategory={async (name, allowedType) => { await addCategory(name, allowedType) }} onDeleteCategory={deleteCategory} canDeleteCategory={category => !!user && category.user_id === user.id} /></section>}
           </>}

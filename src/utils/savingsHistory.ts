@@ -1,13 +1,17 @@
-import { Transaction } from '../types/financial'
+import { DateRange, Transaction } from '../types/financial'
 import { supabaseRest } from '../lib/supabaseRest'
 
-export async function loadSavingsHistory(userId: string): Promise<Transaction[]> {
+export async function loadSavingsHistory(userId: string, expenses?: DateRange & { currency: string }): Promise<Transaction[]> {
   const rows: Transaction[] = []
   const pageSize = 500
   for (let offset = 0; ; offset += pageSize) {
     const page = await supabaseRest.select<Transaction>('transactions', {
       select: '*,accounts:accounts!transactions_account_owner_fkey(*),categories(*)',
-      eq: { user_id: userId },
+      eq: { user_id: userId, ...(expenses && { currency: expenses.currency, type: 'outcome' }) },
+      ...(expenses && {
+        gte: { occurred_at: expenses.start.toISOString() },
+        lte: { occurred_at: expenses.end.toISOString() },
+      }),
       is: { deleted_at: null },
       order: 'occurred_at.asc,id.asc',
       limit: pageSize,
