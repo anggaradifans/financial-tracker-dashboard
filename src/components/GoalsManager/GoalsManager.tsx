@@ -1,8 +1,11 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Archive, Check, ChevronDown, Plus, RefreshCw, Target, Trash2 } from 'lucide-react'
 import { useGoals } from '../../hooks/useGoals'
 import { Category, EmergencyFundBasis, FinancialGoal } from '../../types/financial'
 import { notifications } from '../../utils/notifications'
+import { loadSavingsHistory } from '../../utils/savingsHistory'
+import { toCents } from '../../utils/monthlySavingsPlan'
+import MonthlySavingsPlanner, { allocationMoney, goalField, type GoalHistory } from './MonthlySavingsPlanner'
 
 const money = (amount: number, currency: string) => new Intl.NumberFormat('id-ID', {
   style: 'currency', currency, maximumFractionDigits: 0,
@@ -176,21 +179,45 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
   const [customDescription, setCustomDescription] = useState('')
   const [customTarget, setCustomTarget] = useState('')
   const [customDate, setCustomDate] = useState('')
-  const [customMonthly, setCustomMonthly] = useState('')
   const [emergencyName, setEmergencyName] = useState('Emergency Fund')
   const [emergencyDate, setEmergencyDate] = useState('')
-  const [emergencyMonthly, setEmergencyMonthly] = useState('')
   const [emergencyBalance, setEmergencyBalance] = useState('0')
-  const [contributionInputs, setContributionInputs] = useState<Record<string, { amount: string; date: string; description: string }>>({})
+  const [contributionInputs, setContributionInputs] = useState<Record<string, { amount: string; date: string; description: string; transactionId?: string }>>({})
+  const [history, setHistory] = useState<GoalHistory>({ rows: [], loading: false, error: null, loaded: false })
+  const [historyRequest, setHistoryRequest] = useState(0)
+  const [recording, setRecording] = useState<Record<string, boolean>>({})
+
+  const loadHistory = () => {
+    if (!history.loading) setHistoryRequest(current => current + 1)
+  }
+
+  useEffect(() => {
+    if (!userId || !historyRequest) return
+    let cancelled = false
+    setHistory({ rows: [], loading: true, error: null, loaded: false })
+    void loadSavingsHistory(userId).then(rows => {
+      if (!cancelled) setHistory({ rows, loading: false, error: null, loaded: true })
+    }).catch(error => {
+      if (!cancelled) setHistory({ rows: [], loading: false, error: error instanceof Error ? error.message : 'Could not load transactions.', loaded: false })
+    })
+    return () => { cancelled = true }
+  }, [userId, historyRequest])
 
   const activeGoals = useMemo(() => data.goals.filter(goal => goal.status === 'active'), [data.goals])
   const completeGoals = useMemo(() => data.goals.filter(goal => goal.status !== 'active'), [data.goals])
+  const linkedAmounts = useMemo(() => {
+    const amounts = new Map<string, number>()
+    for (const item of data.contributions) {
+      if (item.transaction_id) amounts.set(item.transaction_id, (amounts.get(item.transaction_id) ?? 0) + toCents(Math.abs(Number(item.amount))))
+    }
+    return amounts
+  }, [data.contributions])
 
   const addCustom = async (event: React.FormEvent) => {
     event.preventDefault()
     try {
-      await data.addCustomGoal({ name: customName.trim(), description: customDescription.trim() || null, currency: 'IDR', targetAmount: Number(customTarget), targetDate: customDate || null, plannedMonthlyAmount: customMonthly ? Number(customMonthly) : null })
-      setCustomName(''); setCustomDescription(''); setCustomTarget(''); setCustomDate(''); setCustomMonthly(''); setShowCustomForm(false)
+      await data.addCustomGoal({ name: customName.trim(), description: customDescription.trim() || null, currency: 'IDR', targetAmount: Number(customTarget), targetDate: customDate || null, plannedMonthlyAmount: null })
+      setCustomName(''); setCustomDescription(''); setCustomTarget(''); setCustomDate(''); setShowCustomForm(false)
       notifications.success('Goal created.')
     } catch (error) { notifications.error(error instanceof Error ? error.message : 'Could not create goal.') }
   }
@@ -198,11 +225,18 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
   const addContribution = async (goalId: string, event: React.FormEvent) => {
     event.preventDefault()
     const input = contributionInputs[goalId] || { amount: '', date: localDate(), description: '' }
+    if (recording[goalId]) return
+    if (input.transactionId === '') {
+      notifications.error('Choose a cash-flow transaction or record a manual contribution.')
+      return
+    }
+    setRecording(current => ({ ...current, [goalId]: true }))
     try {
-      await data.addContribution({ goalId, amount: Number(input.amount), contributedOn: input.date || localDate(), description: input.description.trim() || null })
+      await data.addContribution({ goalId, amount: Number(input.amount), contributedOn: input.date || localDate(), description: input.description.trim() || null, transactionId: input.transactionId })
       setContributionInputs(current => ({ ...current, [goalId]: { amount: '', date: localDate(), description: '' } }))
       notifications.success('Contribution recorded.')
     } catch (error) { notifications.error(error instanceof Error ? error.message : 'Could not record contribution.') }
+    finally { setRecording(current => ({ ...current, [goalId]: false })) }
   }
 
   const setStatus = async (goal: FinancialGoal, status: 'completed' | 'archived') => {
@@ -232,7 +266,6 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
         <label className="text-sm font-medium">Goal name<input required maxLength={80} value={customName} onChange={event => setCustomName(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /></label>
         <label className="text-sm font-medium">Target amount (IDR)<input required type="number" min="0.01" step="0.01" value={customTarget} onChange={event => setCustomTarget(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /></label>
         <label className="text-sm font-medium">Target date (optional)<input type="date" value={customDate} onChange={event => setCustomDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /></label>
-        <label className="text-sm font-medium">Planned monthly contribution (IDR)<input type="number" min="0" step="0.01" value={customMonthly} onChange={event => setCustomMonthly(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /></label>
         <label className="text-sm font-medium sm:col-span-2">Description (optional)<input maxLength={500} value={customDescription} onChange={event => setCustomDescription(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /></label>
         <div className="flex flex-wrap gap-2 sm:col-span-2"><button type="submit" className="min-h-11 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">Create goal</button><button type="button" onClick={() => setShowCustomForm(false)} className="min-h-11 rounded-md border border-gray-300 px-4 text-sm font-semibold hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-gray-600 dark:hover:bg-gray-700">Cancel</button></div>
       </form>}
@@ -242,12 +275,9 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
           <label className="text-sm font-medium">Goal name<input required maxLength={80} value={emergencyName} onChange={event => setEmergencyName(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /></label>
           <label className="text-sm font-medium">Target date (optional)<input type="date" value={emergencyDate} onChange={event => setEmergencyDate(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /></label>
           <label className="text-sm font-medium">Current emergency savings (IDR)<input type="number" min="0" step="0.01" value={emergencyBalance} onChange={event => setEmergencyBalance(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /><span className="mt-1 block text-xs font-normal text-gray-600 dark:text-gray-400">Added as the opening contribution.</span></label>
-          <label className="text-sm font-medium">Planned monthly contribution (optional)<input type="number" min="0" step="0.01" value={emergencyMonthly} onChange={event => setEmergencyMonthly(event.target.value)} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /><span className="mt-1 block text-xs font-normal text-gray-600 dark:text-gray-400">Used if no target date is set.</span></label>
         </div>
         <RecommendationForm categories={categories} targetDate={emergencyDate || null} startingBalance={Number(emergencyBalance) || 0} onPreview={(months, ids, multiplier) => data.previewEmergencyFund(months, ids, multiplier)} actionLabel="Calculate an emergency fund target" onAccept={async (preview, override, ids, months, multiplier) => {
-          const target = override ?? preview.suggested_target!
-          const monthlyNeeded = monthlySavingsNeeded(target, Number(emergencyBalance) || 0, emergencyDate || null)
-          const openingBalanceSaved = await data.createEmergencyFund({ name: emergencyName.trim(), currency: 'IDR', targetDate: emergencyDate || null, plannedMonthlyAmount: monthlyNeeded ?? (emergencyMonthly ? Number(emergencyMonthly) : null), basisMonths: months, categoryIds: ids, multiplier, expectedAverage: preview.average_monthly_essential!, targetOverride: override, periodStart: preview.period_start, initialBalance: Number(emergencyBalance) || 0 })
+          const openingBalanceSaved = await data.createEmergencyFund({ name: emergencyName.trim(), currency: 'IDR', targetDate: emergencyDate || null, plannedMonthlyAmount: null, basisMonths: months, categoryIds: ids, multiplier, expectedAverage: preview.average_monthly_essential!, targetOverride: override, periodStart: preview.period_start, initialBalance: Number(emergencyBalance) || 0 })
           setShowEmergencyForm(false)
           if (openingBalanceSaved) notifications.success('Emergency fund created with its starting balance.')
           else notifications.warning('Emergency fund created, but the starting balance was not recorded. Add it as a contribution.')
@@ -255,12 +285,23 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
       </div>}
 
       {activeGoals.length === 0 && !showEmergencyForm && !showCustomForm && <div className="rounded-xl border border-dashed border-gray-300 bg-white px-5 py-10 text-center dark:border-gray-700 dark:bg-gray-800"><Target className="mx-auto h-8 w-8 text-gray-500" aria-hidden="true" /><h2 className="mt-3 text-lg font-semibold">No active goals yet</h2><p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Set an emergency fund target from your spending history or create a custom goal.</p></div>}
+      {activeGoals.length > 0 && <MonthlySavingsPlanner goals={activeGoals} data={data} history={history} loadHistory={loadHistory}
+        onSaved={() => notifications.success('Monthly savings plan saved.')} />}
 
       {activeGoals.map(goal => {
         const stats = data.progress[goal.id]
         const rec = data.recommendations[goal.id]
         const goalContributions = data.contributions.filter(item => item.goal_id === goal.id)
         const input = contributionInputs[goal.id] || { amount: '', date: localDate(), description: '' }
+        const linkEnabled = input.transactionId !== undefined
+        const linkedToGoal = new Set(goalContributions.map(item => item.transaction_id))
+        const linkable = linkEnabled ? history.rows.filter(tx => tx.currency === goal.currency && !tx.deleted_at &&
+          (tx.type === 'income' || tx.type === 'outcome') && !linkedToGoal.has(tx.id) &&
+          toCents(Number(tx.amount)) > (linkedAmounts.get(tx.id) ?? 0)).slice().reverse() : []
+        const selectedLink = linkable.find(tx => tx.id === input.transactionId)
+        const available = selectedLink ? (toCents(Number(selectedLink.amount)) - (linkedAmounts.get(selectedLink.id) ?? 0)) / 100 : null
+        const updateInput = (change: Partial<typeof input>) =>
+          setContributionInputs(current => ({ ...current, [goal.id]: { ...input, ...change } }))
         const monthlySaving = monthlySavingsNeeded(goal.target_amount, Number(stats?.saved_amount || 0), goal.target_date)
         return <article key={goal.id} className="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800 sm:p-5">
           <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><h2 className="text-lg font-semibold">{goal.name}</h2><span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium capitalize text-gray-700 dark:bg-gray-700 dark:text-gray-200">{goal.kind === 'emergency_fund' ? 'Emergency fund' : 'Custom goal'}</span></div>{goal.description && <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{goal.description}</p>}</div><div className="flex flex-wrap gap-2">
@@ -273,7 +314,7 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
             <div><p className="text-sm text-gray-600 dark:text-gray-400">Target</p><p className="mt-1 text-lg font-semibold">{money(goal.target_amount, goal.currency)}</p></div>
             <div><p className="text-sm text-gray-600 dark:text-gray-400">Remaining</p><p className="mt-1 text-lg font-semibold">{money(Number(stats?.remaining_amount ?? goal.target_amount), goal.currency)}</p></div>
             <div><p className="text-sm text-gray-600 dark:text-gray-400">{stats?.months_of_coverage != null ? 'Months of essential coverage' : 'Target date'}</p><p className="mt-1 text-lg font-semibold">{stats?.months_of_coverage != null ? `${stats.months_of_coverage} months` : goal.target_date || 'Not set'}</p></div>
-            {goal.kind === 'emergency_fund' && <div><p className="text-sm text-gray-600 dark:text-gray-400">Save monthly to reach target</p><p className="mt-1 text-lg font-semibold">{goal.target_date ? (monthlySaving === null ? 'Choose a future date' : money(monthlySaving, goal.currency)) : 'Add a target date'}</p></div>}
+            {goal.kind === 'emergency_fund' && <div><p className="text-sm text-gray-600 dark:text-gray-400">Monthly amount needed for target</p><p className="mt-1 text-lg font-semibold">{goal.target_date ? (monthlySaving === null ? 'Choose a future date' : money(monthlySaving, goal.currency)) : 'Add a target date'}</p></div>}
           </div>
           <div className="mt-4" aria-label={`${stats?.progress_percent || 0}% of target saved`}><div className="mb-1 flex justify-between text-sm"><span>Progress</span><span>{Number(stats?.progress_percent || 0).toFixed(1)}%</span></div><div className="h-2.5 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"><div className="h-full rounded-full bg-primary-600 dark:bg-primary-400" style={{ width: `${Math.min(100, Math.max(0, Number(stats?.progress_percent || 0)))}%` }} /></div></div>
           {goal.kind === 'emergency_fund' && rec && <div className="mt-3 text-sm text-gray-600 dark:text-gray-400"><p>Recommendation based on {rec.included_month_count} of {rec.basis_months} months · {money(rec.average_monthly_essential, goal.currency)} average essential spend/month · saved {rec.period_start}–{rec.period_end}.</p><details className="mt-2"><summary className="inline-flex min-h-11 cursor-pointer items-center gap-2 font-semibold text-primary-700 dark:text-primary-300">Saved category basis <ChevronDown className="h-4 w-4" aria-hidden="true" /></summary><ul className="mt-1 grid gap-x-6 sm:grid-cols-2">{(data.recommendationCategories[goal.id] || []).map(category => <li key={category.category_id || category.category_name} className="flex justify-between gap-3 py-1"><span>{category.included ? 'Included' : 'Excluded'} · {category.category_name}</span><span>{money(category.avg_monthly_amount, goal.currency)}/mo</span></li>)}</ul></details></div>}
@@ -287,11 +328,40 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
               <label className="text-sm font-medium">Amount ({goal.currency})<input required type="number" step="0.01" value={input.amount} onChange={event => setContributionInputs(current => ({ ...current, [goal.id]: { ...input, amount: event.target.value } }))} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /><span className="mt-1 block text-xs font-normal text-gray-600 dark:text-gray-400">Use a negative amount for a withdrawal.</span></label>
               <label className="text-sm font-medium">Date<input required type="date" value={input.date} onChange={event => setContributionInputs(current => ({ ...current, [goal.id]: { ...input, date: event.target.value } }))} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /></label>
               <label className="text-sm font-medium">Note<input maxLength={200} value={input.description} onChange={event => setContributionInputs(current => ({ ...current, [goal.id]: { ...input, description: event.target.value } }))} className="mt-1 min-h-11 w-full rounded-md border border-gray-300 bg-white px-3 dark:border-gray-600 dark:bg-gray-900" /></label>
-              <button type="submit" className="min-h-11 self-end rounded-md bg-primary-600 px-4 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">Add deposit</button>
+              <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium sm:col-span-2">
+                <input type="checkbox" checked={linkEnabled} className="h-4 w-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700"
+                  onChange={event => {
+                    updateInput({ transactionId: event.target.checked ? '' : undefined })
+                    if (event.target.checked && !history.loaded) loadHistory()
+                  }} />
+                Link a cash-flow transaction
+              </label>
+              {linkEnabled && <div className="min-w-0 sm:col-span-2 lg:col-span-3">
+                <label className="block text-sm font-medium">Transaction for {goal.name}
+                  <select required className={`${goalField} cursor-pointer`} value={input.transactionId}
+                    onChange={event => updateInput({ transactionId: event.target.value })}>
+                    <option value="">Choose a transaction</option>
+                    {linkable.map(tx => <option key={tx.id} value={tx.id}>
+                      {new Date(tx.occurred_at).toLocaleDateString()} · {tx.description || tx.category?.name || tx.type} · {allocationMoney(Number(tx.amount), tx.currency)}
+                    </option>)}
+                  </select>
+                </label>
+                {history.loading && <p className="mt-1 text-sm" role="status">Loading transactions…</p>}
+                {history.error && <p className="mt-1 text-sm" role="alert">Could not load transactions. <button type="button" onClick={loadHistory} className="min-h-11 cursor-pointer px-2 underline">Retry</button></p>}
+                {history.loaded && !linkable.length && <p className="mt-1 text-sm">No cash-flow transactions with an available amount in {goal.currency}.</p>}
+                {available !== null && <p className="mt-1 text-sm" aria-live="polite">
+                  {allocationMoney(available, goal.currency)} available to link across goals.
+                  {Math.abs(Number(input.amount)) > available && ' Enter a smaller contribution amount.'}
+                </p>}
+              </div>}
+              <button type="submit" disabled={recording[goal.id] || (linkEnabled && (available === null || Math.abs(Number(input.amount)) > available))}
+                className="min-h-11 cursor-pointer self-end rounded-md bg-primary-700 px-4 text-sm font-semibold text-white hover:bg-blue-800 active:bg-primary-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:outline-primary-400">
+                {recording[goal.id] ? 'Recording…' : 'Add contribution'}
+              </button>
             </form>
             <button type="button" onClick={() => setContributionInputs(current => ({ ...current, [goal.id]: { ...input, amount: input.amount.startsWith('-') ? input.amount.slice(1) : `-${input.amount}` } }))} className="mb-4 min-h-11 text-sm font-semibold text-primary-700 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:text-primary-300">Enter a negative amount for a withdrawal</button>
           </details>
-          {goalContributions.length > 0 && <details className="mt-3 rounded-lg border border-gray-200 px-4 dark:border-gray-700"><summary className="flex min-h-12 cursor-pointer items-center justify-between text-sm font-semibold">Recent activity ({goalContributions.length})<ChevronDown className="h-4 w-4" aria-hidden="true" /></summary><div className="pb-3">{goalContributions.slice(0, 5).map(item => <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 py-2 text-sm dark:border-gray-700"><span>{item.contributed_on}{item.description ? ` · ${item.description}` : ''}</span><span className="flex items-center gap-2"><span className={item.amount < 0 ? 'text-red-700 dark:text-red-300' : 'text-gray-900 dark:text-white'}>{item.amount < 0 ? '−' : '+'}{money(Math.abs(Number(item.amount)), goal.currency)}</span><button type="button" onClick={() => { if (window.confirm('Remove this contribution from the goal?')) void data.deleteContribution(item.id).then(() => notifications.success('Contribution removed.')).catch(error => notifications.error(error instanceof Error ? error.message : 'Could not remove contribution.')) }} aria-label="Remove contribution" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-red-300"><Trash2 className="h-4 w-4" aria-hidden="true" /></button></span></div>)}</div></details>}
+          {goalContributions.length > 0 && <details className="mt-3 rounded-lg border border-gray-200 px-4 dark:border-gray-700"><summary className="flex min-h-12 cursor-pointer items-center justify-between text-sm font-semibold">Recent activity ({goalContributions.length})<ChevronDown className="h-4 w-4" aria-hidden="true" /></summary><div className="pb-3">{goalContributions.slice(0, 5).map(item => <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 py-2 text-sm dark:border-gray-700"><span>{item.contributed_on}{item.description ? ` · ${item.description}` : ''}{item.transaction_id && ' · Linked transaction'}</span><span className="flex items-center gap-2"><span className={item.amount < 0 ? 'text-red-700 dark:text-red-300' : 'text-gray-900 dark:text-white'}>{item.amount < 0 ? '−' : '+'}{money(Math.abs(Number(item.amount)), goal.currency)}</span><button type="button" onClick={() => { if (window.confirm('Remove this contribution from the goal?')) void data.deleteContribution(item.id).then(() => notifications.success('Contribution removed.')).catch(error => notifications.error(error instanceof Error ? error.message : 'Could not remove contribution.')) }} aria-label="Remove contribution" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-red-300"><Trash2 className="h-4 w-4" aria-hidden="true" /></button></span></div>)}</div></details>}
         </article>
       })}
 

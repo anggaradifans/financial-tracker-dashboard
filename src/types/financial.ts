@@ -108,10 +108,20 @@ export interface FinancialGoal {
   target_amount: number
   target_date: string | null
   planned_monthly_amount: number | null
+  priority: GoalPriority
   status: GoalStatus
   completed_at: string | null
   created_at: string
   updated_at: string
+}
+
+export type GoalPriority = 1 | 2 | 3
+
+export interface MonthlySavingsPlan {
+  currency: string
+  revision: string
+  baseline_amount: number
+  baseline_month: string | null
 }
 
 export interface GoalProgress {

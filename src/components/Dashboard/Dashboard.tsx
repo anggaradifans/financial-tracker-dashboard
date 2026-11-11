@@ -124,7 +124,7 @@ const Dashboard: React.FC = () => {
               <ConnectedSavingsAnalysis userId={user?.id} dateRange={dateRange} revision={transactions} spendingDrafts={spendingDrafts} view={analyticsView} />
             </div>}
             {section === 'budgets' && <div className="space-y-8">{budgetProgress.length > 0 && <BudgetProgressCards budgetProgress={budgetProgress} currency="IDR" />}<section aria-labelledby="budget-management"><h2 id="budget-management" className="mb-4 text-xl font-semibold">Manage budgets</h2><BudgetManager budgets={budgets} categories={categories} onAddBudget={async (budget: Omit<Budget, 'id' | 'created_at' | 'category'>) => { await addBudget(budget) }} onUpdateBudget={async (id, updates) => { await updateBudget(id, updates) }} onDeleteBudget={async id => { await deleteBudget(id) }} currency="IDR" /></section></div>}
-            {section === 'goals' && <GoalsManager userId={user?.id} categories={categories} />}
+            {section === 'goals' && <GoalsManager key={user?.id} userId={user?.id} categories={categories} />}
             {section === 'net-worth' && user && <NetWorth key={user.id} userId={user.id} accounts={accounts} />}
             {section === 'settings' && <section aria-labelledby="account-settings"><h2 id="account-settings" className="mb-4 text-xl font-semibold">Accounts and categories</h2><CategoryAccountManager accounts={accounts} categories={categories} onAddAccount={async (name, currency) => { await addAccount(name, currency) }} onDeleteAccount={deleteAccount} onAddCategory={async (name, allowedType) => { await addCategory(name, allowedType) }} onDeleteCategory={deleteCategory} canDeleteCategory={category => !!user && category.user_id === user.id} /></section>}
           </>}
