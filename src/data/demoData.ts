@@ -23,7 +23,6 @@ export const demoAccounts: Account[] = [
   { id: 'acc-3', name: 'Credit Card', currency: 'IDR', created_at: new Date().toISOString() },
 ]
 
-// Generate demo transactions for the last 30 days
 const generateDemoTransactions = (): Transaction[] => {
   const transactions: Transaction[] = []
   const now = new Date()
@@ -110,6 +109,32 @@ const generateDemoTransactions = (): Transaction[] => {
       user_id: DEMO_USER_ID,
       category,
       account,
+    })
+  }
+
+  const baselinePurchases = [
+    { monthsAgo: 3, day: 10, amount: 320000, description: 'Weekend groceries' },
+    { monthsAgo: 2, day: 8, amount: 280000, description: 'Market groceries' },
+    { monthsAgo: 1, day: 14, amount: 360000, description: 'Grocery delivery' },
+  ]
+  const dining = demoCategories[0]
+  const checking = demoAccounts[1]
+  for (const purchase of baselinePurchases) {
+    const date = new Date(now.getFullYear(), now.getMonth() - purchase.monthsAgo, purchase.day, 12).toISOString()
+    transactions.push({
+      id: `tx-baseline-${purchase.monthsAgo}`,
+      type: 'outcome',
+      amount: purchase.amount,
+      currency: checking.currency,
+      description: purchase.description,
+      occurred_at: date,
+      created_at: date,
+      category_id: dining.id,
+      account_id: checking.id,
+      metadata: {},
+      user_id: DEMO_USER_ID,
+      category: dining,
+      account: checking,
     })
   }
 

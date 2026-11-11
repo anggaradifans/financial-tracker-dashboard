@@ -120,3 +120,108 @@ test('history loader paginates deterministically and retains owner/deletion filt
   assert.equal(requests[0].query.order, 'occurred_at.asc,id.asc')
   assert.ok(requests.every(request => request.table === 'transactions'))
 })
+
+const { compareSpending, buildSpendingBaseline, createSpendingDraft, estimateSpendingReduction } = await loadTsModule('../src/utils/spendingOpportunities.ts', import.meta.url)
+const may = new Date('2026-05-10T12:00:00')
+
+function spendingTx(id, type, amount, day, categoryId = 'food', currency = 'IDR', extra = {}) {
+  return tx(type, amount, day, currency, { id, category_id: categoryId, category: { name: 'Food' }, ...extra })
+}
+
+test('category comparison reconciles to the recorded expenses and guards unavailable changes', () => {
+  const rows = [
+    spendingTx('opening', 'income', 1000, '2026-02-02'),
+    spendingTx('old', 'outcome', 80, '2026-03-31'),
+    spendingTx('unchanged-label-new-category', 'outcome', 20, '2026-04-01', 'new-food'),
+    spendingTx('new', 'outcome', 100, '2026-04-30'),
+    spendingTx('refund', 'income', 10, '2026-04-30'),
+    spendingTx('transfer', 'transfer_out', 1000, '2026-04-30'),
+    spendingTx('deleted', 'outcome', 1000, '2026-04-30', 'food', 'IDR', { deleted_at: '2026-04-30' }),
+    spendingTx('usd', 'outcome', 50, '2026-04-30', 'food', 'USD'),
+  ]
+  const report = buildSavingsReport(rows, april, may)
+  const [idr, usd] = report.groups
+  const comparison = compareSpending(idr, report)
+  assert.equal(comparison.categories.reduce((sum, row) => sum + row.currentAmount, 0), idr.current.expenses * 100)
+  const food = comparison.categories.find(row => row.id === 'food')
+  assert.equal(food.change, 2000)
+  assert.equal(food.percent, 25)
+  assert.equal(food.currentRows.map(row => row.id).join(), 'new')
+  const newFood = comparison.categories.find(row => row.id === 'new-food')
+  assert.equal(newFood.change, 2000)
+  assert.equal(newFood.percent, null)
+  assert.equal(compareSpending(usd, report).categories[0].change, null)
+
+  const future = buildSavingsReport(rows, range('2026-05-20', '2026-06-20'), may)
+  assert.equal(compareSpending(future.groups[0], future).currentCovered, false)
+  const sparse = buildSavingsReport(rows.filter(row => row.id !== 'old'), april, may)
+  assert.equal(compareSpending(sparse.groups[0], sparse).previousCovered, false)
+  const transferOnlyOpening = buildSavingsReport(rows.map(row => row.id === 'opening' ? { ...row, type: 'transfer_in' } : row), april, may)
+  assert.equal(compareSpending(transferOnlyOpening.groups[0], transferOnlyOpening).previousCovered, false)
+})
+
+test('baseline accounts for gaps, first and partial months, essential categories and zero-spend months', () => {
+  const rows = [
+    spendingTx('opening', 'outcome', 1000, '2025-12-02'),
+    spendingTx('bills', 'outcome', 70, '2026-02-05', 'bills'),
+    spendingTx('purchase', 'outcome', 50, '2026-03-05'),
+    spendingTx('other-currency', 'income', 80, '2026-04-05', 'food', 'USD'),
+    spendingTx('salary', 'income', 200, '2026-04-06'),
+    spendingTx('current', 'outcome', 900, '2026-05-03'),
+  ]
+  const [idr] = buildSavingsReport(rows, april, may).groups
+  const draft = { ...createSpendingDraft(may), startMonth: '2025-12', endMonth: '2026-06', categoryIds: ['food', 'bills'], essentialIds: ['bills'] }
+  const baseline = buildSpendingBaseline(idr, draft, may)
+  assert.equal(baseline.count, 3)
+  assert.equal(baseline.gross, 5000)
+  assert.equal(baseline.monthly, 1667)
+  assert.equal(baseline.months.find(month => month.key === '2025-12').reason, 'Incomplete recorded history')
+  assert.equal(baseline.months.find(month => month.key === '2026-01').reason, 'No recorded activity')
+  assert.equal(baseline.months.find(month => month.key === '2026-05').reason, 'Month has not finished')
+  assert.equal(baseline.months.find(month => month.key === '2026-06').reason, 'Month has not finished')
+  assert.equal(buildSpendingBaseline(idr, { ...draft, excludedMonths: ['2026-02', '2026-03'] }, may).monthly, null)
+  assert.equal(buildSpendingBaseline(idr, { ...draft, excludedPurchases: ['purchase'] }, may).message, 'The included categories have zero net spending to reduce.')
+  assert.match(buildSpendingBaseline(idr, { ...draft, endMonth: '2025-11' }, may).message, /valid start and end month/)
+})
+
+test('only explicit eligible credits lower the preview basis, in the month received', () => {
+  const rows = [
+    spendingTx('opening', 'income', 1000, '2026-01-02'),
+    spendingTx('purchase', 'outcome', 120, '2026-02-05'),
+    spendingTx('refund', 'income', 40, '2026-03-05'),
+    spendingTx('salary', 'income', 1000, '2026-03-06'),
+    spendingTx('over-refund', 'income', 81, '2026-03-07'),
+    spendingTx('foreign-refund', 'income', 10, '2026-03-08', 'food', 'USD'),
+  ]
+  const [idr] = buildSavingsReport(rows, april, may).groups
+  const link = creditId => ({ creditId, purchaseId: 'purchase' })
+  const draft = { ...createSpendingDraft(may), categoryIds: ['food'], refunds: [link('refund'), link('refund'), link('over-refund'), link('foreign-refund')] }
+  const baseline = buildSpendingBaseline(idr, draft, may)
+  assert.equal(baseline.gross, 12000)
+  assert.equal(baseline.refunded, 4000)
+  assert.equal(baseline.monthly, 4000)
+  assert.equal(baseline.months.find(month => month.key === '2026-02').refunded, 0)
+  assert.equal(baseline.months.find(month => month.key === '2026-03').refunded, 4000)
+  assert.match(baseline.refunds[1].error, /already applied/)
+  assert.match(baseline.refunds[2].error, /exceed/)
+  assert.match(baseline.refunds[3].error, /outside/)
+  assert.equal(buildSpendingBaseline(idr, { ...draft, excludedPurchases: ['purchase'] }, may).refunded, 0)
+  assert.equal(buildSpendingBaseline(idr, { ...draft, excludedMonths: ['2026-03'] }, may).refunded, 0)
+  const [afterEdit] = buildSavingsReport(rows.map(row => row.id === 'refund' ? { ...row, deleted_at: '2026-04-01' } : row), april, may).groups
+  assert.equal(buildSpendingBaseline(afterEdit, { ...draft, refunds: [link('refund')] }, may).refunded, 0)
+})
+
+test('reductions round in hundredths and never project negative spending', () => {
+  const draft = createSpendingDraft(may)
+  const preview = (reduction, mode = 'percent', monthly = 105) => estimateSpendingReduction(monthly, { ...draft, reduction, mode })
+  assert.equal(preview('50').estimate.reduction, 53)
+  assert.equal(preview('50').estimate.annual, 636)
+  assert.equal(preview('100').estimate.projected, 0)
+  assert.equal(preview('0').estimate.annual, 0)
+  assert.equal(preview('.05', 'amount').estimate.projected, 100)
+  assert.equal(preview('1.05', 'amount').estimate.projected, 0)
+  for (const input of ['-1', '100.01', '0.001', 'Infinity', '1e2']) assert.ok(preview(input).error)
+  assert.ok(preview('1.06', 'amount').error)
+  assert.ok(preview('1.05', 'amount', 104).error)
+  assert.equal(preview('', 'percent').estimate, null)
+})

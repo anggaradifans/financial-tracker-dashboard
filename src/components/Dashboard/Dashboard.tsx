@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
+import { useSpendingDrafts } from '../../hooks/useSpendingDrafts'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeftRight, Download, LogOut, Menu, Moon, Plus, Sun, Upload } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import { useFinancialData, getDateRangeForPeriod } from '../../hooks/useFinancialData'
 import { Budget, DateRange, PeriodFilter as PeriodFilterType } from '../../types/financial'
+import AnalyticsNavigation, { getAnalyticsView } from '../AnalyticsNavigation/AnalyticsNavigation'
 import FinancialSummaryCards from '../FinancialSummaryCards'
 import ConnectedSavingsAnalysis from '../SavingsAnalysis/SavingsAnalysis'
 import TransactionTable from '../TransactionTable'
@@ -41,6 +43,7 @@ const Dashboard: React.FC = () => {
   const { user, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const section = getDashboardSection(location.pathname, '/dashboard')
+  const analyticsView = getAnalyticsView(location.pathname, '/dashboard')
   const [period, setPeriod] = useState<PeriodFilterType>('month')
   const [dateRange, setDateRange] = useState<DateRange | null>(() => getDateRangeForPeriod('month'))
   const [showTransactionForm, setShowTransactionForm] = useState(false)
@@ -51,6 +54,7 @@ const Dashboard: React.FC = () => {
   const [showAmounts, setShowAmounts] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
+  const spendingDrafts = useSpendingDrafts()
   const data = useFinancialData(user?.id, dateRange)
   const { transactions, accounts, categories, budgets, loading, error, refresh, addTransaction, addTransfer, updateTransaction, deleteTransaction, addAccount, deleteAccount, addCategory, deleteCategory, addBudget, updateBudget, deleteBudget } = data
   const summary = data.getFinancialSummaryForDateRange(dateRange)
@@ -114,7 +118,11 @@ const Dashboard: React.FC = () => {
           {loading ? <div className="grid grid-cols-1 gap-4 md:grid-cols-3" role="status" aria-label="Loading financial data"><CardSkeleton /><CardSkeleton /><CardSkeleton /></div> : <>
             {section === 'overview' && <div className="space-y-8"><PeriodFilter period={period} dateRange={dateRange} onPeriodChange={handlePeriodChange} onCustomRangeChange={setCustomRange} /><FinancialSummaryCards summary={summary} currency="IDR" showAmounts={showAmounts} onToggleAmounts={() => setShowAmounts(!showAmounts)} />{budgetProgress.length > 0 && <section aria-labelledby="budget-highlights"><h2 id="budget-highlights" className="mb-4 text-xl font-semibold">Budget highlights</h2><BudgetProgressCards budgetProgress={budgetProgress} currency="IDR" /></section>}<section aria-labelledby="recent-transactions" className="space-y-4"><div className="flex items-end justify-between gap-3"><div><h2 id="recent-transactions" className="text-xl font-semibold">Recent transactions</h2><p className="text-sm text-gray-600 dark:text-gray-400">The five latest entries in this period.</p></div><button onClick={() => navigate('/dashboard/transactions')} className="min-h-11 rounded-md px-3 text-sm font-medium text-primary-700 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-primary-900/30">View all</button></div><TransactionTable transactions={transactions.slice(0, 5)} accounts={accounts} categories={categories} onEdit={openEditTransaction} onDelete={handleDeleteTransaction} currency="IDR" onAddTransaction={openNewTransaction} onImportStatement={() => setShowImportModal(true)} emptyDescription="No transactions in this period. Add one to start tracking your finances." /></section></div>}
             {section === 'transactions' && <div className="space-y-6"><PeriodFilter period={period} dateRange={dateRange} onPeriodChange={handlePeriodChange} onCustomRangeChange={setCustomRange} /><section aria-labelledby="all-transactions" className="space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><h2 id="all-transactions" className="text-xl font-semibold">All transactions</h2><div className="flex items-center gap-2"><button onClick={() => setShowTransferForm(true)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-gray-300 dark:border-gray-600 px-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"><ArrowLeftRight className="h-4 w-4" aria-hidden="true" />Add transfer</button><button onClick={() => setShowImportModal(true)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-gray-300 dark:border-gray-600 px-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"><Upload className="h-4 w-4" aria-hidden="true" />Import PDF</button><button onClick={handleExport} disabled={transactions.length === 0} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"><Download className="h-4 w-4" aria-hidden="true" />Export CSV</button></div></div><TransactionTable transactions={transactions} accounts={accounts} categories={categories} onEdit={openEditTransaction} onDelete={handleDeleteTransaction} currency="IDR" onAddTransaction={openNewTransaction} onImportStatement={() => setShowImportModal(true)} emptyDescription="No transactions in this period. Choose another period or add a transaction." /></section></div>}
-            {section === 'analytics' && <div className="space-y-8"><PeriodFilter period={period} dateRange={dateRange} onPeriodChange={handlePeriodChange} onCustomRangeChange={setCustomRange} /><ConnectedSavingsAnalysis userId={user?.id} dateRange={dateRange} revision={transactions} /></div>}
+            {section === 'analytics' && <div className="space-y-6">
+              <AnalyticsNavigation basePath="/dashboard" view={analyticsView} />
+              {analyticsView !== '/savings-preview' && <PeriodFilter period={period} dateRange={dateRange} onPeriodChange={handlePeriodChange} onCustomRangeChange={setCustomRange} />}
+              <ConnectedSavingsAnalysis userId={user?.id} dateRange={dateRange} revision={transactions} spendingDrafts={spendingDrafts} view={analyticsView} />
+            </div>}
             {section === 'budgets' && <div className="space-y-8">{budgetProgress.length > 0 && <BudgetProgressCards budgetProgress={budgetProgress} currency="IDR" />}<section aria-labelledby="budget-management"><h2 id="budget-management" className="mb-4 text-xl font-semibold">Manage budgets</h2><BudgetManager budgets={budgets} categories={categories} onAddBudget={async (budget: Omit<Budget, 'id' | 'created_at' | 'category'>) => { await addBudget(budget) }} onUpdateBudget={async (id, updates) => { await updateBudget(id, updates) }} onDeleteBudget={async id => { await deleteBudget(id) }} currency="IDR" /></section></div>}
             {section === 'goals' && <GoalsManager userId={user?.id} categories={categories} />}
             {section === 'net-worth' && user && <NetWorth key={user.id} userId={user.id} accounts={accounts} />}

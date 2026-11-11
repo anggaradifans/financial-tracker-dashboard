@@ -38,7 +38,7 @@ const AppContent = () => {
       {/* Protected routes */}
       <Route
         path="/dashboard/*"
-        element={user ? <Dashboard /> : <Navigate to="/" replace />}
+        element={user ? <Dashboard key={user.id} /> : <Navigate to="/" replace />}
       />
       
       {/* Auth routes */}

@@ -2,7 +2,7 @@
 
 Issue: https://github.com/anggaradifans/financial-tracker-dashboard/issues/22
 
-Open **Analytics** in the authenticated dashboard or public demo. The selected reporting period controls the period totals and category charts. The monthly savings trend covers all recorded months, including empty months and the current partial month. Expand a month or either comparison period to inspect the transactions behind its totals.
+Open **Analytics → Cash flow** in the authenticated dashboard or public demo. The selected reporting period controls cash-flow totals and the category comparison and charts under **Spending**. The monthly savings trend covers all recorded months, including empty months and the current partial month. Open **Monthly transaction history** and expand a month, or expand either comparison period to inspect its transactions.
 
 ## Calculation rules
 

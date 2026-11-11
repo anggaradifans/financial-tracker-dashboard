@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
+import { useSpendingDrafts } from '../../hooks/useSpendingDrafts'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ArrowLeftRight, Download, Menu, Moon, Plus, Sun } from 'lucide-react'
 import { useDemoFinancialData } from '../../hooks/useDemoFinancialData'
 import { getDateRangeForPeriod } from '../../hooks/useFinancialData'
 import { Budget, DateRange, PeriodFilter as PeriodFilterType } from '../../types/financial'
+import AnalyticsNavigation, { getAnalyticsView } from '../AnalyticsNavigation/AnalyticsNavigation'
 import FinancialSummaryCards from '../FinancialSummaryCards'
 import { SavingsAnalysis } from '../SavingsAnalysis/SavingsAnalysis'
 import { demoTransactions } from '../../data/demoData'
@@ -38,6 +40,7 @@ const DemoDashboard: React.FC = () => {
   const location = useLocation()
   const { theme, toggleTheme } = useTheme()
   const section = getDashboardSection(location.pathname, '/demo')
+  const analyticsView = getAnalyticsView(location.pathname, '/demo')
   const [period, setPeriod] = useState<PeriodFilterType>('month')
   const [dateRange, setDateRange] = useState<DateRange | null>(() => getDateRangeForPeriod('month'))
   const [showTransactionForm, setShowTransactionForm] = useState(false)
@@ -46,6 +49,7 @@ const DemoDashboard: React.FC = () => {
   const [showAmounts, setShowAmounts] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
+  const spendingDrafts = useSpendingDrafts()
   const data = useDemoFinancialData(dateRange)
   const { transactions, accounts, categories, budgets, loading, error, refresh, addTransaction, addTransfer, updateTransaction, deleteTransaction, addAccount, deleteAccount, addCategory, deleteCategory, addBudget, updateBudget, deleteBudget } = data
   const summary = data.getFinancialSummaryForDateRange(dateRange)
@@ -95,7 +99,11 @@ const DemoDashboard: React.FC = () => {
           {loading ? <div className="grid grid-cols-1 gap-4 md:grid-cols-3" role="status" aria-label="Loading demo financial data"><CardSkeleton /><CardSkeleton /><CardSkeleton /></div> : <>
             {section === 'overview' && <div className="space-y-8"><PeriodFilter period={period} dateRange={dateRange} onPeriodChange={handlePeriodChange} onCustomRangeChange={setCustomRange} /><FinancialSummaryCards summary={summary} currency="IDR" showAmounts={showAmounts} onToggleAmounts={() => setShowAmounts(!showAmounts)} />{budgetProgress.length > 0 && <section aria-labelledby="demo-budget-highlights"><h2 id="demo-budget-highlights" className="mb-4 text-xl font-semibold">Budget highlights</h2><BudgetProgressCards budgetProgress={budgetProgress} currency="IDR" /></section>}<section aria-labelledby="demo-recent-transactions" className="space-y-4"><div className="flex items-end justify-between gap-3"><div><h2 id="demo-recent-transactions" className="text-xl font-semibold">Recent transactions</h2><p className="text-sm text-gray-600 dark:text-gray-400">The five latest sample entries.</p></div><button onClick={() => navigate('/demo/transactions')} className="min-h-11 rounded-md px-3 text-sm font-medium text-primary-700 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-primary-900/30">View all</button></div><TransactionTable transactions={transactions.slice(0, 5)} accounts={accounts} categories={categories} onEdit={openEditTransaction} onDelete={handleDeleteTransaction} currency="IDR" onAddTransaction={openNewTransaction} emptyDescription="No sample transactions in this period. Choose another period to see demo activity." /></section></div>}
             {section === 'transactions' && <div className="space-y-6"><PeriodFilter period={period} dateRange={dateRange} onPeriodChange={handlePeriodChange} onCustomRangeChange={setCustomRange} /><section aria-labelledby="all-demo-transactions" className="space-y-4"><div className="flex flex-wrap items-center justify-between gap-3"><h2 id="all-demo-transactions" className="text-xl font-semibold">All sample transactions</h2><div className="flex items-center gap-2"><button onClick={() => setShowTransferForm(true)} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-gray-300 dark:border-gray-600 px-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"><ArrowLeftRight className="h-4 w-4" aria-hidden="true" />Add transfer</button><button onClick={handleExport} disabled={transactions.length === 0} className="inline-flex min-h-11 items-center gap-2 rounded-md border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"><Download className="h-4 w-4" aria-hidden="true" />Export CSV</button></div></div><TransactionTable transactions={transactions} accounts={accounts} categories={categories} onEdit={openEditTransaction} onDelete={handleDeleteTransaction} currency="IDR" onAddTransaction={openNewTransaction} emptyDescription="No sample transactions in this period. Choose another period to see demo activity." /></section></div>}
-            {section === 'analytics' && <div className="space-y-8"><PeriodFilter period={period} dateRange={dateRange} onPeriodChange={handlePeriodChange} onCustomRangeChange={setCustomRange} /><SavingsAnalysis transactions={demoTransactions} dateRange={dateRange} basePath="/demo" /></div>}
+            {section === 'analytics' && <div className="space-y-6">
+              <AnalyticsNavigation basePath="/demo" view={analyticsView} />
+              {analyticsView !== '/savings-preview' && <PeriodFilter period={period} dateRange={dateRange} onPeriodChange={handlePeriodChange} onCustomRangeChange={setCustomRange} />}
+              <SavingsAnalysis transactions={demoTransactions} dateRange={dateRange} basePath="/demo" spendingDrafts={spendingDrafts} view={analyticsView} />
+            </div>}
             {section === 'budgets' && <div className="space-y-8">{budgetProgress.length > 0 && <BudgetProgressCards budgetProgress={budgetProgress} currency="IDR" />}<section aria-labelledby="demo-budget-management"><h2 id="demo-budget-management" className="mb-4 text-xl font-semibold">Manage demo budgets</h2><BudgetManager budgets={budgets} categories={categories} onAddBudget={async (budget: Omit<Budget, 'id' | 'created_at' | 'category'>) => { await addBudget(budget); notifications.info('Demo mode: Budget would be saved in real mode') }} onUpdateBudget={async (id, updates) => { await updateBudget(id, updates); notifications.info('Demo mode: Budget would be updated in real mode') }} onDeleteBudget={async id => { await deleteBudget(id); notifications.info('Demo mode: Budget would be deleted in real mode') }} currency="IDR" /></section></div>}
             {section === 'goals' && <section className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800"><h2 className="text-lg font-semibold">Goals are saved to your account</h2><p className="mt-2 max-w-2xl text-sm text-gray-600 dark:text-gray-400">This preview uses sample transactions and does not save goals or contributions. Sign in to create a savings goal and get an emergency fund recommendation from your own completed months.</p></section>}
             {section === 'net-worth' && <DemoNetWorth />}
