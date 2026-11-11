@@ -152,8 +152,10 @@ test('balance sheet saves properties and investments, keeps history, and support
 
   await page.setViewportSize({ width: 320, height: 850 })
   for (const theme of ['light', 'dark']) {
+    await page.getByRole('button', { name: 'Open navigation' }).click()
     const toggle = page.getByRole('button', { name: `Switch to ${theme} mode` })
     if (await toggle.count()) await toggle.click()
+    await page.keyboard.press('Escape')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   }
   await addAsset.click()

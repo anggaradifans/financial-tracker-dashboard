@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabaseRest } from '../lib/supabaseRest'
 import {
   Transaction,
@@ -22,7 +22,10 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
   const [categories, setCategories] = useState<Category[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
+  const [hasLoaded, setHasLoaded] = useState(false)
+  const [loadedDateRange, setLoadedDateRange] = useState<DateRange | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const requestVersion = useRef(0)
 
   useEffect(() => {
     if (!userId) {
@@ -30,31 +33,43 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
       setAccounts([])
       setCategories([])
       setBudgets([])
+      setHasLoaded(false)
+      setLoadedDateRange(null)
       setLoading(false)
       return
     }
     fetchAllData()
+    return () => { requestVersion.current += 1 }
     // fetchAllData is recreated with the current user and date-range scope.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, dateRange])
 
   const fetchAllData = async () => {
+    const version = ++requestVersion.current
     try {
       setLoading(true)
       setError(null)
 
-      await Promise.all([
+      const [nextTransactions, nextAccounts, nextCategories, nextBudgets] = await Promise.all([
         fetchTransactions(),
         fetchAccounts(),
         fetchCategories(),
         fetchBudgets(),
       ])
+      if (version !== requestVersion.current) return
+      setTransactions(nextTransactions)
+      setAccounts(nextAccounts)
+      setCategories(nextCategories)
+      setBudgets(nextBudgets)
+      setHasLoaded(true)
+      setLoadedDateRange(dateRange)
     } catch (err) {
+      if (version !== requestVersion.current) return
       devError('[useFinancialData] Error fetching data:', err)
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch data'
       setError(errorMessage)
     } finally {
-      setLoading(false)
+      if (version === requestVersion.current) setLoading(false)
     }
   }
 
@@ -88,13 +103,11 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
       const data = await supabaseRest.select<Transaction>('transactions', query)
 
       // Transform the response to match the expected structure
-      const transformedData = data.map((tx: any) => ({
+      return data.map((tx: any) => ({
         ...tx,
         account: tx.accounts || tx.account || null,
         category: tx.categories || tx.category || null,
       }))
-
-      setTransactions(transformedData || [])
     } catch (err) {
       devError('[useFinancialData] Error fetching transactions:', err)
       throw err
@@ -103,11 +116,10 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
 
   const fetchAccounts = async () => {
     try {
-      const data = await supabaseRest.select<Account>('accounts', {
+      return await supabaseRest.select<Account>('accounts', {
         eq: { user_id: userId },
         order: 'name.asc',
       })
-      setAccounts(data || [])
     } catch (err) {
       devError('[useFinancialData] Error fetching accounts:', err)
       throw err
@@ -116,12 +128,9 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
 
   const fetchCategories = async () => {
     try {
-      const data = await supabaseRest.select<any>('categories', {
+      return await supabaseRest.select<Category>('categories', {
         order: 'name.asc',
       })
-
-      const mappedData = (data || []) as Category[]
-      setCategories(mappedData)
     } catch (err) {
       devError('[useFinancialData] Error fetching categories:', err)
       throw err
@@ -140,11 +149,10 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
       }
 
       const data = await supabaseRest.select<Budget>('budgets', query)
-      const transformedData = data.map((budget: any) => ({
+      return data.map((budget: any) => ({
         ...budget,
         category: budget.categories || budget.category || null,
       }))
-      setBudgets(transformedData || [])
     } catch (err) {
       devError('[useFinancialData] Error fetching budgets:', err)
       throw err
@@ -183,8 +191,10 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
   // Both legs are created by one database call; the idempotency key makes a retry safe.
   const addTransfer = async (values: TransferFormValues, transferId: string) => {
     try {
+      const version = requestVersion.current
       const id = await supabaseRest.rpc<string>('create_transfer', buildCreateTransferParams(values, accounts, transferId))
-      await fetchTransactions()
+      const nextTransactions = await fetchTransactions()
+      if (version === requestVersion.current) setTransactions(nextTransactions)
       return id
     } catch (err) {
       devError('[useFinancialData] Error adding transfer:', err)
@@ -548,6 +558,8 @@ export const useFinancialData = (userId: string | undefined, dateRange: DateRang
     categories,
     budgets,
     loading,
+    hasLoaded,
+    loadedDateRange,
     error,
     refresh: fetchAllData,
     addTransaction,

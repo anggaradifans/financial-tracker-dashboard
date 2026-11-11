@@ -26,11 +26,6 @@
     min-width: 44px;
   }
 
-  .transaction-table table {
-    width: 100%;
-    min-width: 860px;
-  }
-
   .transaction-table input::placeholder {
     @apply text-gray-500 dark:text-gray-400;
   }

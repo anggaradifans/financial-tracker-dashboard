@@ -152,7 +152,9 @@ test('compares scenarios and saves an explicitly accepted spending snapshot', as
   await expect(form.getByText('Financial freedom plan saved.')).toBeVisible()
   expect(saved).toMatchObject({ annual_spending: 120, spending_period_start: '2025-11-01', calculation_date: '2026-11-11' })
 
+  await page.getByRole('button', { name: 'Open navigation' }).click()
   await page.getByRole('button', { name: 'Switch to dark mode' }).click()
+  await page.keyboard.press('Escape')
   await expect(page.locator('html')).toHaveClass(/dark/)
   await withdrawalHelp.click()
   await expect(withdrawalHelpText).toBeVisible()

@@ -126,7 +126,9 @@ test('creates all new goal types and keeps valuation and debt actuals separate f
   await expect(debt.getByText('Recent activity (1)')).toBeVisible()
 
   for (const theme of ['dark', 'light']) {
+    await page.getByRole('button', { name: 'Open navigation' }).click()
     await page.getByRole('button', { name: `Switch to ${theme} mode` }).click()
+    await page.keyboard.press('Escape')
     await expect(estimate('Loan')).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   }

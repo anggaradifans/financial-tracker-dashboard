@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { Transaction, TransactionType, Account, Category } from '../../types/financial'
 import { format } from 'date-fns'
-import { Edit, Trash2, Search, Filter, ChevronLeft, ChevronRight, Upload } from 'lucide-react'
+import { Edit, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { TableRowSkeleton } from '../SkeletonLoader'
 import EmptyState from '../EmptyState'
 import ConfirmDialog from '../ConfirmDialog'
@@ -32,7 +32,8 @@ interface TransactionTableProps {
   loading?: boolean
   currency?: string
   onAddTransaction?: () => void
-  onImportStatement?: () => void
+  compact?: boolean
+  updating?: boolean
   accounts?: Account[]
   categories?: Category[]
   emptyDescription?: string
@@ -45,7 +46,8 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
   loading,
   currency = 'IDR',
   onAddTransaction,
-  onImportStatement,
+  compact = false,
+  updating = false,
   accounts = [],
   categories = [],
   emptyDescription = 'Start tracking your finances by adding your first transaction',
@@ -153,8 +155,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
         variant="danger"
       />
       <div className="transaction-table bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-colors duration-300">
-      {/* Filters */}
-      <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 transition-colors">
+      {!compact && <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 transition-colors">
         <div className="flex flex-col gap-3">
           {/* Row 1: Search */}
           <div className="relative">
@@ -168,14 +169,12 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
               className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
             />
           </div>
-          {/* Row 2: Dropdowns */}
-          <div className="flex flex-wrap gap-2 items-center">
-            <Filter className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+          <div className="grid grid-cols-2 gap-2 xl:grid-cols-3">
             <select
               aria-label="Transaction type"
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as TransactionType | 'transfer' | 'all')}
-              className="flex-1 min-w-[110px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
+              className="w-full min-w-0 px-2 py-2 text-sm sm:px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
             >
               <option value="all">All Types</option>
               <option value="income">Income</option>
@@ -186,7 +185,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
               aria-label="Transaction category"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="flex-1 min-w-[130px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
+              className="w-full min-w-0 px-2 py-2 text-sm sm:px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
             >
               <option value="all">All Categories</option>
               {categories.map((c) => (
@@ -197,41 +196,43 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
               aria-label="Transaction account"
               value={accountFilter}
               onChange={(e) => setAccountFilter(e.target.value)}
-              className="flex-1 min-w-[130px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
+              className="w-full min-w-0 px-2 py-2 text-sm sm:px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 transition-colors"
             >
               <option value="all">All Accounts</option>
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>{a.name}</option>
               ))}
             </select>
-            {(typeFilter !== 'all' || accountFilter !== 'all' || categoryFilter !== 'all' || searchTerm) && (
-              <button
-                onClick={() => { setTypeFilter('all'); setAccountFilter('all'); setCategoryFilter('all'); setSearchTerm('') }}
-                className="px-3 py-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors whitespace-nowrap"
-              >
-                Clear filters
-              </button>
-            )}
-            {onImportStatement && (
-              <button
-                type="button"
-                onClick={onImportStatement}
-                className="px-3 py-2 text-xs font-medium text-gray-700 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors whitespace-nowrap inline-flex items-center gap-1.5 ml-auto"
-              >
-                <Upload className="h-3.5 w-3.5 text-gray-500" />
-                Import Statement
-              </button>
-            )}
+            <select aria-label="Sort by" value={`${sortBy}-${sortOrder}`} onChange={event => {
+              const [field, order] = event.target.value.split('-') as ['date' | 'amount', 'asc' | 'desc']
+              setSortBy(field)
+              setSortOrder(order)
+            }} className="w-full min-w-0 rounded-md border bg-white px-2 text-sm text-gray-900 sm:px-3 dark:bg-gray-700 dark:text-white xl:hidden">
+              <option value="date-desc">Newest first</option>
+              <option value="date-asc">Oldest first</option>
+              <option value="amount-desc">Highest amount</option>
+              <option value="amount-asc">Lowest amount</option>
+            </select>
           </div>
+          {(typeFilter !== 'all' || accountFilter !== 'all' || categoryFilter !== 'all' || searchTerm) && (
+            <button
+              type="button"
+              onClick={() => { setTypeFilter('all'); setAccountFilter('all'); setCategoryFilter('all'); setSearchTerm('') }}
+              className="self-start whitespace-nowrap rounded-md border border-gray-300 px-3 text-sm text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
-      </div>
+      </div>}
 
+      <div aria-busy={loading || updating}>
       {/* Mobile Card View */}
-      <div className="md:hidden space-y-3 p-4">
+      <div className={compact ? 'divide-y divide-gray-200 dark:divide-gray-700' : 'space-y-3 p-3 sm:p-4 xl:hidden'}>
         {loading ? (
           <>
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 animate-pulse">
+              <div key={i} aria-hidden="true" className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 animate-pulse">
                 <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
                 <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
               </div>
@@ -257,10 +258,10 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
           filteredTransactions.map((transaction) => (
             <div
               key={transaction.id}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 space-y-3 animate-fadeIn"
+              className={compact ? 'px-3 py-2 sm:px-4' : 'rounded-lg border border-gray-200 p-3 dark:border-gray-700 sm:p-4'}
             >
-              <div className="flex flex-col gap-3">
-                <div className="flex-1 min-w-0">
+              <div className={compact ? 'flex flex-wrap items-center justify-between gap-x-4 gap-y-1' : 'flex flex-col gap-2'}>
+                <div className={compact ? 'min-w-0 grow basis-48' : 'min-w-0'}>
                   <div className="flex flex-wrap items-center gap-2 mb-2">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       badgeToneClass[amountTone(transaction.type)]
@@ -275,20 +276,21 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                     </span>
                   </div>
                   {transaction.description && (
-                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-1 line-clamp-2">{transaction.description}</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-1 break-words">{transaction.description}</p>
                   )}
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400">
                     <span>{format(new Date(transaction.occurred_at), 'MMM dd, yyyy')}</span>
                     {transaction.account?.name && (
-                      <span>• {transaction.account.name}</span>
+                      <span className="min-w-0 break-words">• {transaction.account.name}</span>
                     )}
                   </div>
                 </div>
-                <div className="flex items-center justify-end gap-2 border-t border-gray-200 dark:border-gray-700 pt-2">
+                <div className={`flex flex-wrap items-center justify-end gap-2 ${compact ? 'ml-auto' : 'border-t border-gray-200 pt-1 dark:border-gray-700'}`}>
                   {!isTransferType(transaction.type) && (
                     <button
                       onClick={() => onEdit(transaction)}
-                      className="inline-flex items-center gap-2 px-3 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-md transition-colors"
+                      disabled={updating}
+                      className="inline-flex items-center gap-2 px-3 text-sm text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-md transition-colors disabled:opacity-50"
                       title="Edit"
                     >
                       <Edit className="h-4 w-4" aria-hidden="true" /> Edit
@@ -296,7 +298,8 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                   )}
                   <button
                     onClick={() => handleDeleteClick(transaction)}
-                    className="inline-flex items-center gap-2 px-3 text-sm text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
+                    disabled={updating}
+                    className="inline-flex items-center gap-2 px-3 text-sm text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors disabled:opacity-50"
                     title="Delete"
                   >
                     <Trash2 className="h-4 w-4" aria-hidden="true" /> Delete
@@ -308,24 +311,21 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
         )}
       </div>
 
-      {/* Desktop Table View */}
-      <div className="hidden md:block">
-        <p id="transaction-table-scroll-hint" className="border-b border-gray-200 bg-gray-50 px-4 py-2 text-xs text-gray-600 dark:border-gray-700 dark:bg-gray-900/50 dark:text-gray-300">
-          Scroll horizontally to reach the Actions column.
-        </p>
-        <div
-          className="overflow-x-auto focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 dark:focus:ring-primary-400"
-          role="region"
-          aria-label="Transactions table"
-          aria-describedby="transaction-table-scroll-hint"
-          tabIndex={0}
-        >
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+      {!compact && <div className="hidden xl:block">
+        <table className="w-full table-fixed divide-y divide-gray-200 dark:divide-gray-700">
+          <colgroup>
+            <col className="w-[124px]" />
+            <col className="w-[15%]" />
+            <col className="w-[14%]" />
+            <col />
+            <col className="w-[148px]" />
+            <col className="w-[128px]" />
+          </colgroup>
           <thead className="bg-gray-50 dark:bg-gray-900/50 transition-colors">
             <tr>
               <th
                 aria-sort={sortBy === 'date' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
-                className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <button onClick={() => handleSort('date')} className="inline-flex items-center gap-1 font-medium" aria-label="Sort by date">Date
                 {sortBy === 'date' && (
@@ -333,18 +333,18 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                 )}
                 </button>
               </th>
-              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors">
                 Category
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors">
                 Account
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors">
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors">
                 Description
               </th>
               <th
                 aria-sort={sortBy === 'amount' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
-                className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <button onClick={() => handleSort('amount')} className="inline-flex items-center gap-1 font-medium" aria-label="Sort by amount">Amount
                 {sortBy === 'amount' && (
@@ -352,7 +352,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                 )}
                 </button>
               </th>
-              <th className="px-3 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors">
+              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider transition-colors">
                 Actions
               </th>
             </tr>
@@ -389,10 +389,10 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             ) : (
               filteredTransactions.map((transaction) => (
                 <tr key={transaction.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors animate-fadeIn">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 transition-colors">
+                  <td className="px-4 py-4 text-sm text-gray-900 dark:text-gray-100 transition-colors">
                     {format(new Date(transaction.occurred_at), 'MMM dd, yyyy')}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-4 [overflow-wrap:anywhere]">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       isTransferType(transaction.type)
                         ? badgeToneClass.neutral
@@ -401,24 +401,25 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                       {rowLabel(transaction)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 transition-colors">
+                  <td className="px-4 py-4 [overflow-wrap:anywhere] text-sm text-gray-500 dark:text-gray-400 transition-colors">
                     {transaction.account?.name || '—'}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100 transition-colors">
+                  <td className="px-4 py-4 [overflow-wrap:anywhere] text-sm text-gray-900 dark:text-gray-100 transition-colors">
                     {transaction.description || '—'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right tabular-nums">
+                  <td className="px-4 py-4 [overflow-wrap:anywhere] text-right tabular-nums">
                     <span className={`text-sm font-semibold ${rowAmountToneClass[amountTone(transaction.type)]}`}>
                       {amountSign(transaction.type)}
                       {formatCurrency(Number(transaction.amount))}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-4 py-4 text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
                       {!isTransferType(transaction.type) && (
                         <button
                           onClick={() => onEdit(transaction)}
-                          className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-md transition-colors"
+                          disabled={updating}
+                          className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 rounded-md transition-colors disabled:opacity-50"
                           title="Edit"
                         >
                           <Edit className="h-4 w-4" />
@@ -426,7 +427,8 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
                       )}
                       <button
                         onClick={() => handleDeleteClick(transaction)}
-                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors"
+                        disabled={updating}
+                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-md transition-colors disabled:opacity-50"
                         title="Delete transaction"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -438,11 +440,10 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             )}
           </tbody>
         </table>
-        </div>
+      </div>}
       </div>
 
-      {/* Pagination and Summary */}
-      <div className="px-3 sm:px-6 py-3 sm:py-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 transition-colors">
+      {!compact && !loading && <div className="px-3 sm:px-6 py-3 sm:py-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-200 dark:border-gray-700 transition-colors">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
           {/* Pagination Info */}
           <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 transition-colors text-center sm:text-left">
@@ -532,7 +533,7 @@ const TransactionTable: React.FC<TransactionTableProps> = ({
             </div>
           )}
         </div>
-      </div>
+      </div>}
       </div>
     </>
   )

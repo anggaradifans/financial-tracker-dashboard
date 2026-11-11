@@ -5,8 +5,8 @@ interface SkeletonLoaderProps {
   className?: string
 }
 
-export const CardSkeleton: React.FC = () => (
-  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 animate-pulse transition-colors">
+export const CardSkeleton: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 animate-pulse transition-colors ${className}`}>
     <div className="flex items-center justify-between">
       <div className="flex-1">
         <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 mb-2"></div>
@@ -18,15 +18,15 @@ export const CardSkeleton: React.FC = () => (
 )
 
 export const TableRowSkeleton: React.FC = () => (
-  <tr className="animate-pulse">
+  <tr className="animate-pulse" aria-hidden="true">
     <td className="px-6 py-4 whitespace-nowrap">
-      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 max-w-full"></div>
     </td>
     <td className="px-6 py-4 whitespace-nowrap">
-      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 max-w-full"></div>
     </td>
     <td className="px-6 py-4 whitespace-nowrap">
-      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32 max-w-full"></div>
     </td>
     <td className="px-6 py-4 whitespace-nowrap">
       <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>

@@ -133,7 +133,9 @@ test('previews and saves allocations by currency, and records a partial linked c
 
   await page.setViewportSize({ width: 360, height: 780 })
   for (const theme of ['dark', 'light']) {
+    await page.getByRole('button', { name: 'Open navigation' }).click()
     await page.getByRole('button', { name: `Switch to ${theme} mode` }).click()
+    await page.keyboard.press('Escape')
     await expect(plan).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   }

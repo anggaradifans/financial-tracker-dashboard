@@ -14,6 +14,7 @@ test('dashboard resolves the owner-scoped account embed and preserves transactio
   const { useFinancialData } = await loadTsModule('../src/hooks/useFinancialData.ts', import.meta.url, {
     react: {
       useEffect() {},
+      useRef(current) { return { current } },
       useState(initial) {
         const index = states.push(initial) - 1
         return [initial, value => { states[index] = value }]
@@ -43,5 +44,7 @@ test('dashboard resolves the owner-scoped account embed and preserves transactio
   assert.equal(states[0].length, 2)
   assert.equal(states[0][0].account.name, 'Checking')
   assert.equal(states[0][1].account, null)
-  assert.equal(states[5], null)
+  assert.equal(states[5], true)
+  assert.equal(states[6], range)
+  assert.equal(states[7], null)
 })
