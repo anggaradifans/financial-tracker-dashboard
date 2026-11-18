@@ -1,28 +1,46 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import LoginForm from '../LoginForm'
 import RegistrationForm from '../RegistrationForm'
 import ForgotPasswordForm from './ForgotPasswordForm'
 
-const AuthFlow: React.FC = () => {
-  const [view, setView] = useState<'login' | 'register' | 'forgot-password'>('login')
+const passwordResetPath = '/?view=reset'
+
+export default function AuthFlow() {
+  const [search] = useSearchParams()
+  const navigate = useNavigate()
+  const view = search.get('view')
+  const [email, setEmail] = useState('')
+  const [focusLoginEmail, setFocusLoginEmail] = useState(view === 'reset')
+
+  const returnToLogin = (address: string) => {
+    setEmail(address)
+    setFocusLoginEmail(true)
+    navigate('/', { replace: true })
+  }
+
+  if (view === 'register') {
+    return <RegistrationForm initialEmail={email} onSwitchToLogin={returnToLogin} />
+  }
+
+  if (view === 'reset') {
+    return <ForgotPasswordForm email={email} onEmailChange={setEmail} onSwitchToLogin={returnToLogin} />
+  }
 
   return (
-    <>
-      {view === 'login' && (
-        <LoginForm 
-          onSwitchToRegister={() => setView('register')} 
-          onSwitchToForgotPassword={() => setView('forgot-password')}
-        />
-      )}
-      {view === 'register' && (
-        <RegistrationForm onSwitchToLogin={() => setView('login')} />
-      )}
-      {view === 'forgot-password' && (
-        <ForgotPasswordForm onSwitchToLogin={() => setView('login')} />
-      )}
-    </>
+    <LoginForm
+      initialEmail={email}
+      focusEmail={focusLoginEmail}
+      onSwitchToRegister={address => {
+        setEmail(address)
+        setFocusLoginEmail(true)
+        navigate('/?view=register')
+      }}
+      onSwitchToForgotPassword={address => {
+        setEmail(address)
+        setFocusLoginEmail(true)
+        navigate(passwordResetPath)
+      }}
+    />
   )
 }
-
-export default AuthFlow
-

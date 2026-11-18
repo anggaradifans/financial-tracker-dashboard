@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import Dashboard from './components/Dashboard'
@@ -10,6 +10,7 @@ import { LoadingIndicator } from './components/LoadingIndicator'
 
 const AppContent = () => {
   const { user, loading, error: authError } = useAuth()
+  const [search] = useSearchParams()
 
   if (loading) {
     return (
@@ -39,12 +40,12 @@ const AppContent = () => {
       {/* Auth routes */}
       <Route
         path="/"
-        element={user ? <Navigate to="/dashboard" replace /> : <AuthFlow />}
+        element={user && search.get('view') !== 'reset' ? <Navigate to="/dashboard" replace /> : <AuthFlow />}
       />
 
       <Route
         path="/update-password"
-        element={user ? <UpdatePassword /> : <Navigate to="/" replace />}
+        element={<UpdatePassword />}
       />
       
       {/* Catch all - redirect to home */}
