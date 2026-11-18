@@ -1,7 +1,8 @@
+import { LoadingIndicator } from '../LoadingIndicator'
 import React, { useState, useEffect, useRef, useId } from 'react'
 import { Transaction, Account, Category, TransactionType } from '../../types/financial'
 import { format } from 'date-fns'
-import { X, Loader2 } from 'lucide-react'
+import { X } from 'lucide-react'
 import { notifications } from '../../utils/notifications'
 
 interface TransactionFormProps {
@@ -342,10 +343,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
               disabled={loading}
             >
               {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {transaction ? 'Updating...' : 'Adding...'}
-                </>
+                <LoadingIndicator size="sm" className="loading-indicator--on-action" label={transaction ? 'Updating transaction…' : 'Adding transaction…'} />
               ) : (
                 `${transaction ? 'Update' : 'Add'} Transaction`
               )}

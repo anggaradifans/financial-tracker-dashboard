@@ -1,3 +1,4 @@
+import { LoadingIndicator } from '../LoadingIndicator'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { format } from 'date-fns'
@@ -53,7 +54,7 @@ function TrackedAssets({ userId, currency, onUse }: { userId: string; currency: 
       <h3 id="tracked-freedom-assets" className="text-sm font-semibold">Tracked balances · {currency}</h3>
       <Link className={`${link} text-sm`} to="/dashboard/net-worth" target="_blank" rel="noopener">Review Net worth (new tab)</Link>
     </div>
-    {data.status === 'loading' && <p role="status" className={muted}>Loading tracked balances…</p>}
+    {data.status === 'loading' && <LoadingIndicator size="sm" label="Loading tracked balances…" />}
     {data.status === 'error' && <div className="space-y-2">
       <p role="alert" className={errorText}>Could not load tracked balances. You can still enter eligible assets manually.</p>
       <button type="button" className={secondary} onClick={() => {
@@ -324,7 +325,7 @@ function PlanEditor({ userId, currencies, initial, reload }: {
             </button>
             {periodStart && <button type="button" className={secondary} onClick={() => { setPeriodStart(null); setPreview(null); edited() }}>Switch to manual spending</button>}
           </div>
-          {previewLoading && <p className={muted} role="status">Loading the last 12 completed months in {currency}.</p>}
+          {previewLoading && <LoadingIndicator size="sm" label={`Loading the last 12 completed months in ${currency}.`} />}
           {previewError && <p role="alert" className={errorText}>Could not load recorded spending. Try the preview again or enter annual spending manually.</p>}
           {preview && <div className="space-y-2 rounded-md bg-gray-50 p-3 dark:bg-gray-900">
             <p role="status" className={muted}>
@@ -399,7 +400,7 @@ export default function FinancialFreedom({ userId, currencies }: { userId: strin
     return () => { active = false }
   }, [userId, attempt])
 
-  if (state === 'loading') return <p role="status" className={muted}>Loading your financial freedom plan…</p>
+  if (state === 'loading') return <LoadingIndicator label="Loading your financial freedom plan…" />
   if (state === 'error') return <div className="space-y-3">
     <p role="alert" className={errorText}>Could not load your financial freedom plan.</p>
     <button type="button" className={secondary} onClick={reload}>Retry loading plan</button>

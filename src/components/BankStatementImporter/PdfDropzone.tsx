@@ -1,17 +1,20 @@
+import { LoadingIndicator } from '../LoadingIndicator';
 import React, { useRef, useState } from 'react';
-import { UploadCloud, FileText, AlertCircle, RefreshCw } from 'lucide-react';
+import { UploadCloud, FileText, AlertCircle } from 'lucide-react';
 
 interface PdfDropzoneProps {
   onFileLoaded: (file: File) => void;
   isLoading?: boolean;
+  readingProgress?: { completed: number; total: number } | null;
 }
 
-export const PdfDropzone: React.FC<PdfDropzoneProps> = ({ onFileLoaded, isLoading = false }) => {
+export const PdfDropzone: React.FC<PdfDropzoneProps> = ({ onFileLoaded, isLoading = false, readingProgress = null }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validateAndProcessFile = (file: File) => {
+    if (isLoading) return;
     setErrorMessage(null);
     if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
       setErrorMessage('Please select a valid PDF file.');
@@ -59,10 +62,11 @@ export const PdfDropzone: React.FC<PdfDropzoneProps> = ({ onFileLoaded, isLoadin
           isDragOver
             ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/30'
             : 'border-gray-300 dark:border-gray-600 hover:border-primary-500 dark:hover:border-primary-400 bg-gray-50/50 dark:bg-gray-900/40'
-        } ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}
+        } ${isLoading ? 'cursor-wait' : ''}`}
       >
         <input
           ref={fileInputRef}
+          disabled={isLoading}
           type="file"
           accept=".pdf,application/pdf"
           onChange={handleFileInputChange}
@@ -70,11 +74,14 @@ export const PdfDropzone: React.FC<PdfDropzoneProps> = ({ onFileLoaded, isLoadin
         />
 
         {isLoading ? (
-          <div className="flex flex-col items-center">
-            <RefreshCw className="h-12 w-12 text-primary-500 animate-spin mb-3" />
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Extracting and decrypting statement...
-            </p>
+          <div className="w-full max-w-sm text-left">
+            {readingProgress && readingProgress.total > 0 ? (
+              <LoadingIndicator variant="progress"
+                label={`Reading statement · ${readingProgress.completed} of ${readingProgress.total} pages`}
+                value={readingProgress.completed / readingProgress.total * 100} />
+            ) : (
+              <LoadingIndicator variant="bar" label="Processing statement…" />
+            )}
           </div>
         ) : (
           <div className="flex flex-col items-center">

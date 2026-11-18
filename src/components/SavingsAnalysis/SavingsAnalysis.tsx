@@ -1,3 +1,4 @@
+import { ChartSkeleton } from '../SkeletonLoader'
 import { memo, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DateRange, Transaction } from '../../types/financial'
@@ -122,7 +123,7 @@ export default function ConnectedSavingsAnalysis({ userId, dateRange, revision, 
     })
     return () => { cancelled = true }
   }, [userId, revision, retry])
-  if (state.loading) return <p role="status" className="min-h-48 py-6">Loading savings history across all reporting periods…</p>
+  if (state.loading) return <div role="status"><span className="sr-only">Loading savings history across all reporting periods…</span><div aria-hidden="true" className="motion-reduce:[&_*]:animate-none"><ChartSkeleton /></div></div>
   if (state.error) return <div role="alert"><p>Could not load savings history: {state.error}</p><button className="mt-3 min-h-11 rounded-md bg-primary-600 px-4 text-white hover:bg-primary-700" onClick={() => setRetry(value => value + 1)}>Retry savings history</button></div>
   return <SavingsAnalysis transactions={state.rows} dateRange={dateRange} basePath="/dashboard" spendingDrafts={spendingDrafts} view={view} />
 }

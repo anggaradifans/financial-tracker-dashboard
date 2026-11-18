@@ -1,0 +1,66 @@
+.loading-indicator {
+  --loading-accent: #2563eb;
+  --loading-track: #dbeafe;
+  --loading-size: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #4b5563;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.dark .loading-indicator {
+  --loading-accent: #60a5fa;
+  --loading-track: #374151;
+  color: #d1d5db;
+}
+.loading-indicator--sm { --loading-size: 16px; gap: 8px; }
+.loading-indicator--lg { --loading-size: 32px; gap: 12px; }
+.loading-indicator__spinner {
+  width: var(--loading-size);
+  height: var(--loading-size);
+  flex: none;
+  color: var(--loading-accent);
+  animation: loading-rotate 900ms linear infinite;
+}
+.loading-indicator__ring { color: var(--loading-track); }
+.loading-indicator--bar, .loading-indicator--progress {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  gap: 10px;
+}
+.loading-indicator__caption { display: flex; justify-content: space-between; gap: 16px; }
+.loading-indicator__value { font-variant-numeric: tabular-nums; flex: none; }
+.loading-indicator__track {
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--loading-track);
+}
+.loading-indicator--lg .loading-indicator__track { height: 6px; }
+.loading-indicator__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--loading-accent);
+  transition: width 200ms ease-out;
+}
+.loading-indicator__fill--indeterminate { width: 35%; animation: loading-traverse 1.6s cubic-bezier(.65, 0, .35, 1) infinite; }
+.loading-indicator__dots { display: inline-flex; align-items: center; gap: 4px; height: var(--loading-size); flex: none; }
+.loading-indicator__dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--loading-accent); animation: loading-dot 1.4s ease-in-out infinite; }
+.loading-indicator__dots i:nth-child(2) { animation-delay: 160ms; }
+.loading-indicator__dots i:nth-child(3) { animation-delay: 320ms; }
+@keyframes loading-rotate { to { transform: rotate(360deg); } }
+@keyframes loading-traverse { from { transform: translateX(-110%); } to { transform: translateX(300%); } }
+@keyframes loading-dot { 0%, 70%, 100% { opacity: .4; } 35% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .loading-indicator *, .loading-indicator *::before { animation: none !important; transition: none !important; }
+  .loading-indicator__fill--indeterminate { width: 40%; margin-inline: auto; }
+}
+
+/* Action buttons supply their own foreground, including disabled states. */
+.loading-indicator.loading-indicator--on-action { color: inherit; --loading-accent: currentColor; --loading-track: currentColor; }
+.loading-indicator--on-action .loading-indicator__ring { opacity: .25; }

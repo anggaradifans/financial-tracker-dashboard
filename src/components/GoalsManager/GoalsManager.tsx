@@ -1,3 +1,5 @@
+import { CardSkeleton } from '../SkeletonLoader'
+import { LoadingIndicator } from '../LoadingIndicator'
 import React, { useEffect, useMemo, useState } from 'react'
 import { Archive, Check, ChevronDown, Plus, RefreshCw, Target, Trash2 } from 'lucide-react'
 import { useGoals } from '../../hooks/useGoals'
@@ -120,7 +122,7 @@ const RecommendationForm: React.FC<RecommendationFormProps> = ({
         {selectable.length === 0 && <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">No eligible spending categories are available.</p>}
       </fieldset>
       <button type="button" onClick={runPreview} disabled={busy || selectable.length === 0} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md border border-gray-300 bg-white px-4 text-sm font-semibold text-gray-800 hover:bg-gray-100 active:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
-        {busy ? 'Calculating…' : 'Preview calculation'}
+        {busy ? <LoadingIndicator size="sm" className="loading-indicator--on-action" label="Calculating…" /> : 'Preview calculation'}
       </button>
       {formError && <p className="mt-3 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200" role="alert">{formError}</p>}
       {preview && <div className="mt-4 rounded-lg border border-primary-200 bg-white p-4 dark:border-primary-800 dark:bg-gray-800" aria-live="polite">
@@ -148,7 +150,7 @@ const RecommendationForm: React.FC<RecommendationFormProps> = ({
               {preview.categories.filter(category => !category.included).map(category => <div key={category.category_id || category.category_name} className="flex justify-between gap-4 py-1 text-sm text-gray-600 dark:text-gray-400"><span>Excluded: {category.category_name}</span><span>{money(category.avg_monthly_amount, preview.currency)}/mo</span></div>)}
             </div>
           </details>
-          <button type="button" onClick={accept} disabled={busy} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white hover:bg-primary-700 active:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">{busy ? 'Saving…' : 'Accept recommendation'}</button>
+          <button type="button" onClick={accept} disabled={busy} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white hover:bg-primary-700 active:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700">{busy ? <LoadingIndicator size="sm" className="loading-indicator--on-action" label="Saving…" /> : 'Accept recommendation'}</button>
         </> : <div className="text-sm text-gray-700 dark:text-gray-200">
           {preview.included_month_count < preview.min_months_required
             ? <p>Only {preview.included_month_count} complete spending {preview.included_month_count === 1 ? 'month is' : 'months are'} available in this window. At least {preview.min_months_required} are needed for a recommendation.</p>
@@ -255,7 +257,7 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
     finally { setBusyGoalId(null) }
   }
 
-  if (data.loading) return <div className="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300" role="status">Loading goals…</div>
+  if (data.loading) return <div role="status"><span className="sr-only">Loading goals…</span><div aria-hidden="true" className="grid gap-4 sm:grid-cols-2 motion-reduce:[&_*]:animate-none"><CardSkeleton /><CardSkeleton /></div></div>
   if (data.error) return <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200" role="alert"><p>{data.error}</p><p className="mt-2">Apply the goals migration in Supabase, then reload this page.</p><button type="button" onClick={() => void data.refresh()} className="mt-3 min-h-11 rounded-md border border-red-400 px-3 font-semibold hover:bg-red-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 dark:hover:bg-red-900/50">Retry</button></div>
 
   return (
@@ -377,7 +379,7 @@ const GoalsManager: React.FC<GoalsManagerProps> = ({ userId, categories }) => {
                     </option>)}
                   </select>
                 </label>
-                {history.loading && <p className="mt-1 text-sm" role="status">Loading transactions…</p>}
+                {history.loading && <LoadingIndicator size="sm" label="Loading transactions…" />}
                 {history.error && <p className="mt-1 text-sm" role="alert">Could not load transactions. <button type="button" onClick={loadHistory} className="min-h-11 cursor-pointer px-2 underline">Retry</button></p>}
                 {history.loaded && !linkable.length && <p className="mt-1 text-sm">No cash-flow transactions with an available amount in {goal.currency}.</p>}
                 {available !== null && <p className="mt-1 text-sm" aria-live="polite">

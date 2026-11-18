@@ -1,3 +1,4 @@
+import { CardSkeleton } from '../SkeletonLoader'
 import { useEffect, useRef, useState } from 'react'
 import { Account } from '../../types/financial'
 import { CurrentWealthEntry, WealthKind, WealthSnapshot, WealthTotal, WealthValuation } from '../../types/wealth'
@@ -58,7 +59,7 @@ function NetWorthView({ data, accounts, readOnly = false }: ViewProps) {
     finally { setBusy(false) }
   }
 
-  if (data.loading && !data.entries.length && !data.error && !form) return <p role="status" className="min-h-48 py-8 text-gray-600 dark:text-gray-300">Loading your balance sheet…</p>
+  if (data.loading && !data.entries.length && !data.error && !form) return <div role="status"><span className="sr-only">Loading your balance sheet…</span><div aria-hidden="true" className="grid gap-4 sm:grid-cols-3 motion-reduce:[&_*]:animate-none"><CardSkeleton /><CardSkeleton /><CardSkeleton /></div></div>
   if (data.error && !form) return <div role="alert" className="rounded-lg border border-red-200 bg-white p-5 dark:border-red-900 dark:bg-gray-800"><p className="text-sm text-red-800 dark:text-red-200">{data.error}</p><button type="button" disabled={data.loading} onClick={() => void data.refresh().catch(() => {})} className={`mt-3 ${button}`}>{data.loading ? 'Loading…' : 'Retry balance sheet'}</button></div>
 
   return <div className="space-y-7">

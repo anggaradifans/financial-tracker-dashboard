@@ -1,3 +1,4 @@
+import { LoadingIndicator } from '../LoadingIndicator'
 import { useState, type FormEvent } from 'react'
 import type { FinancialGoal, GoalKind, ManualGoalFields } from '../../types/financial'
 import { goalKindLabels, maxGoalAmount } from '../../utils/goalForecast'
@@ -113,7 +114,7 @@ export default function ManualGoalForm({ goal, onSave, onCancel }: Props) {
       {error && <p role="alert" className="break-words text-sm text-red-700 dark:text-red-300 sm:col-span-2">{error}</p>}
       <div className="flex flex-wrap gap-2 sm:col-span-2">
         <button type="submit" className="min-h-11 cursor-pointer rounded-md bg-primary-700 px-4 text-sm font-semibold text-white hover:bg-blue-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-60 dark:focus-visible:outline-primary-400">
-          {busy ? 'Saving…' : goal ? 'Save changes' : 'Create goal'}
+          {busy ? <LoadingIndicator size="sm" className="loading-indicator--on-action" label="Saving…" /> : goal ? 'Save changes' : 'Create goal'}
         </button>
         <button type="button" onClick={onCancel} className="min-h-11 cursor-pointer rounded-md border border-gray-500 px-4 text-sm font-semibold hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 dark:border-gray-400 dark:hover:bg-gray-700 dark:focus-visible:outline-primary-400">
           Cancel

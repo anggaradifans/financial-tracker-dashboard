@@ -1,6 +1,7 @@
+import { LoadingIndicator } from '../LoadingIndicator'
 import React, { useEffect, useId, useRef, useState } from 'react'
 import { format } from 'date-fns'
-import { Loader2, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { Account } from '../../types/financial'
 import {
   canTransfer,
@@ -230,7 +231,7 @@ const TransferForm: React.FC<TransferFormProps> = ({ accounts, onSave, onCancel 
               className="px-6 py-2 bg-primary-600 dark:bg-primary-500 text-white rounded-md hover:bg-primary-700 dark:hover:bg-primary-600 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               disabled={loading || !available}
             >
-              {loading ? (<><Loader2 className="h-4 w-4 animate-spin" />Saving...</>) : 'Save Transfer'}
+              {loading ? (<LoadingIndicator size="sm" className="loading-indicator--on-action" label="Saving transfer…" />) : 'Save Transfer'}
             </button>
           </div>
         </form>

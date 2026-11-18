@@ -1,3 +1,4 @@
+import { LoadingIndicator } from '../LoadingIndicator'
 import { useId, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { GoalData } from '../../hooks/useGoals'
@@ -135,7 +136,7 @@ function CurrencyPlan({ currency, goals, data, history, loadHistory, onSaved }: 
             </select>
           </label>
           {!history.loading && !history.loaded && !history.error && <button type="button" className={`mt-2 ${secondary}`} onClick={loadHistory}>Load cash-flow history</button>}
-          {history.loading && <p role="status" className={muted}>Loading cash-flow history…</p>}
+          {history.loading && <LoadingIndicator size="sm" label="Loading cash-flow history…" />}
           {history.error && <p className={muted} role="alert">Could not load cash-flow history. <button type="button" className={secondary} onClick={loadHistory}>Retry</button></p>}
           {history.loaded && !months.length && <p className={muted}>No completed months with recorded cash flow in {currency}.</p>}
           {history.loaded && useSavedBaseline && selectedMonth && <button type="button" className={`mt-2 ${secondary}`} onClick={() => setUseSavedBaseline(false)}>Use current recorded amount</button>}
@@ -193,7 +194,7 @@ function CurrencyPlan({ currency, goals, data, history, loadHistory, onSaved }: 
       </div>}
       <button type="submit" disabled={!valid || !dirty || saving}
         className={`${button} bg-primary-700 text-white hover:bg-blue-800 active:bg-primary-900`}>
-        {saving ? 'Saving plan…' : 'Save monthly plan'}
+        {saving ? <LoadingIndicator size="sm" className="loading-indicator--on-action" label="Saving plan…" /> : 'Save monthly plan'}
       </button>
     </fieldset>
   </form>

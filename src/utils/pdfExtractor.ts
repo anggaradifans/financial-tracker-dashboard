@@ -29,7 +29,8 @@ export class IncorrectPasswordError extends Error {
 
 export async function extractTextFromPdfBuffer(
   buffer: ArrayBuffer,
-  password?: string
+  password?: string,
+  onProgress?: (completedPages: number, totalPages: number) => void
 ): Promise<string> {
   const loadingTask = pdfjsLib.getDocument({
     data: new Uint8Array(buffer),
@@ -47,6 +48,7 @@ export async function extractTextFromPdfBuffer(
   try {
     const pdf = await loadingTask.promise;
     let fullText = '';
+    onProgress?.(0, pdf.numPages);
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
@@ -89,6 +91,7 @@ export async function extractTextFromPdfBuffer(
       }
 
       fullText += pageLines.join('\n') + '\n';
+      onProgress?.(pageNum, pdf.numPages);
     }
 
     return fullText;

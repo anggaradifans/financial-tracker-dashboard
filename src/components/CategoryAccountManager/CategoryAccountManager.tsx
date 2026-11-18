@@ -1,3 +1,4 @@
+import { LoadingIndicator } from '../LoadingIndicator'
 import React, { useState } from 'react'
 import { Account, Category, CategoryAllowedType } from '../../types/financial'
 import { Plus, Trash2 } from 'lucide-react'
@@ -136,7 +137,7 @@ const CategoryAccountManager: React.FC<CategoryAccountManagerProps> = ({
                 disabled={loading}
                 className="flex-1 px-3 py-2 bg-primary-600 dark:bg-primary-500 text-white text-sm rounded-md hover:bg-primary-700 dark:hover:bg-primary-600 disabled:opacity-50 transition-colors"
               >
-                {loading ? 'Adding...' : 'Add'}
+                {loading ? <LoadingIndicator size="sm" className="loading-indicator--on-action" label="Adding…" /> : 'Add'}
               </button>
               <button
                 type="button"
@@ -235,7 +236,7 @@ const CategoryAccountManager: React.FC<CategoryAccountManagerProps> = ({
                 disabled={loading}
                 className="flex-1 px-3 py-2 bg-primary-600 dark:bg-primary-500 text-white text-sm rounded-md hover:bg-primary-700 dark:hover:bg-primary-600 disabled:opacity-50 transition-colors"
               >
-                {loading ? 'Adding...' : 'Add'}
+                {loading ? <LoadingIndicator size="sm" className="loading-indicator--on-action" label="Adding…" /> : 'Add'}
               </button>
               <button
                 type="button"

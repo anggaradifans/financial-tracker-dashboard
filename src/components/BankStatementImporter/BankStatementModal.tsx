@@ -1,5 +1,6 @@
+import { LoadingIndicator } from '../LoadingIndicator';
 import React, { useState } from 'react';
-import { X, Sparkles, RefreshCw, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { X, Sparkles, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { PdfDropzone } from './PdfDropzone';
 import { PasswordPromptModal } from './PasswordPromptModal';
 import { ImportSummaryBar } from './ImportSummaryBar';
@@ -46,6 +47,7 @@ export const BankStatementModal: React.FC<BankStatementModalProps> = ({
 
   // Loading & error states
   const [isLoading, setIsLoading] = useState(false);
+  const [readingProgress, setReadingProgress] = useState<{ completed: number; total: number } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
 
@@ -63,6 +65,7 @@ export const BankStatementModal: React.FC<BankStatementModalProps> = ({
     setPasswordError(null);
     setIsLoading(false);
     setIsSaving(false);
+    setReadingProgress(null);
     setGeneralError(null);
   };
 
@@ -138,10 +141,14 @@ export const BankStatementModal: React.FC<BankStatementModalProps> = ({
     setIsLoading(true);
     setGeneralError(null);
     setPasswordError(null);
+    setReadingProgress(null);
 
     try {
       const buffer = await file.arrayBuffer();
-      const text = await extractTextFromPdfBuffer(buffer, password);
+      const text = await extractTextFromPdfBuffer(buffer, password, (completed, total) => {
+        setReadingProgress({ completed, total });
+      });
+      setReadingProgress(null);
       setRawPdfText(text);
       setIsPasswordModalOpen(false);
 
@@ -158,6 +165,7 @@ export const BankStatementModal: React.FC<BankStatementModalProps> = ({
         await runDuplicateCheckAndFinishParsing(result.candidates, result.parserName);
       }
     } catch (err: any) {
+      setReadingProgress(null);
       setIsLoading(false);
       if (err instanceof PasswordRequiredError) {
         setIsPasswordModalOpen(true);
@@ -356,7 +364,7 @@ export const BankStatementModal: React.FC<BankStatementModalProps> = ({
             {/* Step: Upload */}
             {step === 'upload' && (
               <div className="py-6">
-                <PdfDropzone onFileLoaded={handleFileLoaded} isLoading={isLoading} />
+                <PdfDropzone onFileLoaded={handleFileLoaded} isLoading={isLoading} readingProgress={readingProgress} />
               </div>
             )}
 
@@ -384,10 +392,7 @@ export const BankStatementModal: React.FC<BankStatementModalProps> = ({
                       className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 shadow-sm transition-colors whitespace-nowrap"
                     >
                       {isLoading ? (
-                        <>
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                          Analyzing with AI...
-                        </>
+                        <LoadingIndicator size="sm" className="loading-indicator--on-action" label="Analyzing with AI…" />
                       ) : (
                         <>
                           <Sparkles className="h-3.5 w-3.5 mr-1.5" />
@@ -447,10 +452,7 @@ export const BankStatementModal: React.FC<BankStatementModalProps> = ({
                       className="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2 text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg shadow-sm transition-colors"
                     >
                       {isSaving ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                          Importing...
-                        </>
+                        <LoadingIndicator size="sm" className="loading-indicator--on-action" label="Importing transactions…" />
                       ) : (
                         <>
                           <CheckCircle2 className="h-4 w-4 mr-2" />

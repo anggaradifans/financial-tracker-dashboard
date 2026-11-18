@@ -21,6 +21,7 @@ import FinancialFreedom from '../FinancialFreedom/FinancialFreedom'
 import NetWorth from '../NetWorth/NetWorth'
 import ToastNotifications from '../ToastNotifications'
 import ConfirmDialog from '../ConfirmDialog'
+import { LoadingIndicator } from '../LoadingIndicator'
 import DashboardNavigation, { getDashboardSection } from '../DashboardNavigation/DashboardNavigation'
 import { exportToCSV, formatExportFilename } from '../../utils/exportUtils'
 import { notifications } from '../../utils/notifications'
@@ -120,9 +121,8 @@ const Dashboard: React.FC = () => {
       <button type="button" onClick={refresh} className="rounded-md px-2 font-semibold underline">Retry</button>
     </div>
   ) : loading ? (
-    <p role="status" className="text-sm text-gray-600 dark:text-gray-300">
-      {hasLoaded ? 'Updating… Showing the last loaded results.' : 'Loading financial data…'}
-    </p>
+    hasLoaded ? <LoadingIndicator variant="bar" label="Updating… Showing the last loaded results." /> :
+      <p role="status" className="text-sm text-gray-600 dark:text-gray-300">Loading financial data…</p>
   ) : null
 
   return (

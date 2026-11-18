@@ -1,3 +1,4 @@
+import { LoadingIndicator } from '../LoadingIndicator'
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react'
 import { Account, FinancialGoal } from '../../types/financial'
 import { CurrentWealthEntry, WealthCategory, WealthClassification, WealthKind, WealthSaveInput } from '../../types/wealth'
@@ -102,7 +103,7 @@ export default function WealthEntryForm({ entry, kind, accounts, goals, onSave, 
       {kind === 'asset' && <label className="block text-sm font-medium">Goal earmark (optional)<select value={goalId} onChange={event => setGoalId(event.target.value)} className={field}><option value="">No linked goal</option>{goalOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select><span className="mt-1 block text-xs font-normal text-gray-600 dark:text-gray-300">A label for planning. Goal contributions do not add to net worth or change this value.</span></label>}
       <label className="block text-sm font-medium">Notes (optional)<textarea maxLength={500} rows={2} value={notes} onChange={event => setNotes(event.target.value)} className={`${field} py-2`} /></label>
       {error && <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950/50 dark:text-red-200">{error}</p>}
-      <div className="flex flex-wrap justify-end gap-3"><button type="button" disabled={busy} onClick={onClose} className={button}>Cancel</button><button type="submit" disabled={busy} className="min-h-11 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50">{busy ? 'Saving…' : `Save ${kind}`}</button></div>
+      <div className="flex flex-wrap justify-end gap-3"><button type="button" disabled={busy} onClick={onClose} className={button}>Cancel</button><button type="submit" disabled={busy} className="min-h-11 rounded-md bg-primary-600 px-4 text-sm font-semibold text-white hover:bg-primary-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:opacity-50">{busy ? <LoadingIndicator size="sm" className="loading-indicator--on-action" label="Saving…" /> : `Save ${kind}`}</button></div>
     </form>
   </dialog>
 }
