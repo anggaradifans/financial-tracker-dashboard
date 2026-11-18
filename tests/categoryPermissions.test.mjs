@@ -16,6 +16,7 @@ const imports = {
   react: { default: React, useState: React.useState },
   'lucide-react': { Plus, Trash2 },
   '../../utils/notifications': { notifications: {} },
+  '../LoadingIndicator': { LoadingIndicator: () => null },
 }
 const module = new vm.SourceTextModule(outputText, { context })
 await module.link(specifier => {

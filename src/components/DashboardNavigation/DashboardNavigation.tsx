@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import { NavLink } from 'react-router-dom'
-import { BarChart3, LayoutDashboard, ReceiptText, Scale, Settings, Target, WalletCards, X } from 'lucide-react'
+import { BarChart3, LayoutDashboard, ReceiptText, Scale, Settings, ShieldCheck, Target, WalletCards, X } from 'lucide-react'
 
 export type DashboardSection = 'overview' | 'transactions' | 'analytics' | 'budgets' | 'goals' | 'net-worth' | 'settings'
 
@@ -8,6 +8,7 @@ interface DashboardNavigationProps {
   basePath: '/dashboard' | '/demo'
   isOpen: boolean
   onClose: () => void
+  showAdmin?: boolean
   mobileActions?: React.ReactNode
 }
 
@@ -28,7 +29,7 @@ export const getDashboardSection = (pathname: string, basePath: '/dashboard' | '
   return sections.some(section => section.id === segment) ? segment as DashboardSection : 'overview'
 }
 
-const DashboardNavigation: React.FC<DashboardNavigationProps> = ({ basePath, isOpen, onClose, mobileActions }) => {
+const DashboardNavigation: React.FC<DashboardNavigationProps> = ({ basePath, isOpen, onClose, mobileActions, showAdmin = false }) => {
   const closeButton = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -74,6 +75,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({ basePath, isO
               </NavLink>
             )
           })}
+          {showAdmin && <div className="mt-5 border-t border-gray-200 pt-4 dark:border-gray-700"><NavLink to="/admin/storage" onClick={onClose} className={({ isActive }) => `flex min-h-11 items-center gap-3 rounded-md px-3 text-sm font-medium ${isActive ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'}`}><ShieldCheck className="h-5 w-5" aria-hidden="true" />Database storage</NavLink></div>}
         </nav>
         {mobileActions && <div className="mt-4 space-y-1 border-t border-gray-200 pt-4 dark:border-gray-700 lg:hidden">{mobileActions}</div>}
       </aside>

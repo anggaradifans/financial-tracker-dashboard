@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard'
 import DemoDashboard from './components/DemoDashboard'
 import AuthFlow from './components/AuthFlow'
 import UpdatePassword from './components/UpdatePassword/UpdatePassword'
+import AdminStorage from './components/AdminStorage/AdminStorage'
 import './App.css'
 import { LoadingIndicator } from './components/LoadingIndicator'
 
@@ -32,6 +33,7 @@ const AppContent = () => {
       <Route path="/demo/*" element={<DemoDashboard />} />
       
       {/* Protected routes */}
+      <Route path="/admin/storage" element={user ? <AdminStorage key={user.id} /> : <Navigate to="/" replace />} />
       <Route
         path="/dashboard/*"
         element={user ? <Dashboard key={user.id} /> : <Navigate to="/" replace />}

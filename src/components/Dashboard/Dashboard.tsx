@@ -127,7 +127,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="dashboard-page min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-white">
-      <DashboardNavigation basePath="/dashboard" isOpen={mobileNavOpen} onClose={closeNavigation} mobileActions={
+      <DashboardNavigation basePath="/dashboard" showAdmin={user?.app_metadata?.role === 'admin'} isOpen={mobileNavOpen} onClose={closeNavigation} mobileActions={
         <>
           <button type="button" onClick={toggleTheme} className={menuButton}><ThemeIcon className="h-5 w-5" aria-hidden="true" />{themeLabel}</button>
           <button type="button" onClick={() => { closeNavigation(); setShowSignOutConfirm(true) }} className={menuButton}><LogOut className="h-5 w-5" aria-hidden="true" />Sign Out</button>

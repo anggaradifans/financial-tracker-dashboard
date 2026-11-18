@@ -9,6 +9,10 @@
   },
   "rewrites": [
     {
+      "source": "/admin/:path*",
+      "destination": "/index.html"
+    },
+    {
       "source": "/demo",
       "destination": "/index.html"
     },
